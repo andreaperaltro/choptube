@@ -23,7 +23,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [selectedTimestamp, setSelectedTimestamp] = useState(0);
   const [buttonText, setButtonText] = useState('Paste');
-  const [pads, setPads] = useState<DrumPad[]>(() => 
+  const [pads, setPads] = useState<DrumPad[]>(() =>
     Array.from({ length: 16 }, (_, i) => ({
       id: i,
       label: `Pad ${i + 1}`,
@@ -33,6 +33,7 @@ export default function Home() {
     }))
   );
   const currentlyPlayingRef = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Reset pads when video changes
   useEffect(() => {
@@ -76,10 +77,22 @@ export default function Home() {
       console.log('Loading video with ID:', id);
       setError(null);
       setIsLoading(true);
+      
+      // Clear any existing timeout
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+      
       // Reset player state when loading new video
       setPlayer(null);
       setIsPlayerReady(false);
       setVideoId(id);
+      
+      // Set a timeout to show error if video doesn't load within 10 seconds
+      loadingTimeoutRef.current = setTimeout(() => {
+        setError('Video is taking too long to load. Please check the URL and try again.');
+        setIsLoading(false);
+      }, 10000);
     } else {
       setError('Please enter a valid YouTube URL');
     }
@@ -91,6 +104,12 @@ export default function Home() {
     setIsPlayerReady(true);
     setIsLoading(false);
     setError(null);
+    
+    // Clear the loading timeout since video loaded successfully
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
   }, []);
 
   const handlePadTrigger = useCallback((timestamp: number) => {
@@ -98,29 +117,24 @@ export default function Home() {
       try {
         console.log('Triggering pad at timestamp:', timestamp);
         
-        // Stop currently playing pad
-        if (currentlyPlayingRef.current !== null) {
-          setPads(prev => prev.map(pad => 
-            pad.id === currentlyPlayingRef.current 
-              ? { ...pad, isPlaying: false }
-              : pad
-          ));
+        // Find the pad that matches this timestamp
+        const playingPadId = pads.find(pad => pad.timestamp === timestamp)?.id;
+        
+        if (playingPadId !== undefined) {
+          // Reset all pads to not playing, then set the new one to playing
+          setPads(prev => prev.map(pad => ({
+            ...pad,
+            isPlaying: pad.id === playingPadId
+          })));
+          
+          // Update the currently playing reference
+          currentlyPlayingRef.current = playingPadId;
         }
 
         // Seek to timestamp and play
         player.seekTo(timestamp, true);
         player.playVideo();
         
-        // Find and update the playing pad
-        const playingPadId = pads.find(pad => pad.timestamp === timestamp)?.id;
-        if (playingPadId !== undefined) {
-          setPads(prev => prev.map(pad => 
-            pad.id === playingPadId 
-              ? { ...pad, isPlaying: true }
-              : pad
-          ));
-          currentlyPlayingRef.current = playingPadId;
-        }
       } catch (error) {
         console.error('Error triggering pad:', error);
       }
@@ -178,10 +192,9 @@ export default function Home() {
       currentlyPlayingRef.current = null;
     }
     
-    // Handle errors
-    if (event.data === YT.PlayerState.UNSTARTED) {
-      setError('Failed to load video. Please check the URL and try again.');
-      setIsLoading(false);
+    // Clear any existing errors when video starts playing
+    if (event.data === YT.PlayerState.PLAYING) {
+      setError(null);
     }
   }, []);
 
@@ -238,177 +251,109 @@ export default function Home() {
   }, [pads, handlePadTrigger, handlePadStop, handleSetTimestampFromCurrentTime, player, isPlayerReady]);
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--drum-machine-bg)' }}>
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-3 mb-4">
-            <Music className="w-8 h-8" style={{ color: 'var(--drum-machine-accent)' }} />
-            <h1 className="text-4xl font-bold" style={{ color: 'var(--drum-machine-text)' }}>ChopTube</h1>
-          </div>
-          <p className="text-xl mb-6" style={{ color: 'var(--drum-machine-text-dim)' }}>
-            Turn any YouTube video into a drum machine
-          </p>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background Video */}
+      {videoId && (
+        <div className="fixed inset-0 z-0 w-full h-full">
+          <YouTubePlayer
+            videoId={videoId}
+            onPlayerReady={handlePlayerReady}
+            onPlayerStateChange={handlePlayerStateChange}
+          />
         </div>
+      )}
 
-        {/* URL Input */}
-        <div className="max-w-2xl mx-auto mb-8">
-          <form onSubmit={handleUrlSubmit} className="space-y-4">
-            <div className="flex space-x-4">
-              <input
-                type="url"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="Paste YouTube URL here..."
-                className="flex-1 px-4 py-3 rounded-lg border border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={isLoading}
-              />
-                      <button
-                        type={buttonText === 'Paste' ? 'button' : 'submit'}
-                        onClick={buttonText === 'Paste' ? handlePaste : undefined}
-                        disabled={isLoading}
-                        className="control-button px-6 py-3 font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <ExternalLink className="w-5 h-5" />
-                        <span>{isLoading ? 'Loading...' : buttonText}</span>
-                      </button>
+      {/* Overlay Content */}
+      <div className="relative z-10 min-h-screen flex flex-col">
+        {/* Top Controls */}
+        <div className="top-controls-bar p-3">
+          <div className="w-full">
+            <div className="flex items-center justify-between space-x-4">
+              {/* Logo */}
+              <div className="flex items-center space-x-2">
+                <Music className="w-5 h-5 text-white" />
+                <h1 className="text-lg font-bold text-white">ChopTube</h1>
+              </div>
+              
+              {/* URL Input */}
+              <form onSubmit={handleUrlSubmit} className="flex space-x-2 flex-1 max-w-md">
+                <input
+                  type="url"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="YouTube URL..."
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-600 bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  disabled={isLoading}
+                />
+                <button
+                  type={buttonText === 'Paste' ? 'button' : 'submit'}
+                  onClick={buttonText === 'Paste' ? handlePaste : undefined}
+                  disabled={isLoading}
+                  className="control-button px-3 py-2 font-semibold flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>{isLoading ? 'Loading...' : buttonText}</span>
+                </button>
+              </form>
+
+              {/* Auto-Quantize Button */}
+              {isPlayerReady && (
+                <button
+                  onClick={handleAutoQuantize}
+                  className="control-button px-3 py-2 font-semibold flex items-center space-x-1 text-sm"
+                >
+                  <Music className="w-4 h-4" />
+                  <span>Auto-Quantize</span>
+                </button>
+              )}
             </div>
+
+            {/* Error Display */}
             {error && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-3 text-red-200">
+              <div className="mt-2 bg-red-500/20 border border-red-500/50 rounded-lg p-2 text-red-200 text-sm">
                 {error}
               </div>
             )}
-          </form>
+          </div>
         </div>
 
-        {/* YouTube Player */}
-        {videoId && (
-          <div className="mb-8">
-            <YouTubePlayer
-              videoId={videoId}
-              onPlayerReady={handlePlayerReady}
-              onPlayerStateChange={handlePlayerStateChange}
-            />
-          </div>
-        )}
-
-        {/* Video Timeline */}
+        {/* Drum Machine Overlay */}
         {isPlayerReady && (
-          <div className="mb-8">
-            <VideoTimeline
-              player={player}
-              isPlayerReady={isPlayerReady}
-              onTimestampSelect={setSelectedTimestamp}
-              selectedTimestamp={selectedTimestamp}
-            />
+          <div className="flex-1 flex items-center justify-center p-4 pt-20">
+            <div className="w-full max-w-4xl">
+              <DrumMachine
+                onPadTrigger={handlePadTrigger}
+                onPadStop={handlePadStop}
+                pads={pads}
+                onUpdatePad={handleUpdatePad}
+                selectedTimestamp={selectedTimestamp}
+                onTimestampSelect={setSelectedTimestamp}
+                onSetTimestampFromCurrentTime={handleSetTimestampFromCurrentTime}
+              />
+            </div>
           </div>
         )}
 
-
-        {/* Drum Machine */}
-        {isPlayerReady && (
-          <div className="drum-machine-panel p-6">
-                    <h2 className="text-2xl font-bold text-center mb-6" style={{ color: 'var(--drum-machine-text)' }}>
-                      Drum Machine
-                    </h2>
-                    <p className="text-center mb-4" style={{ color: 'var(--drum-machine-text-dim)' }}>
-                      Play the video and click any empty pad to set its timestamp to the current time. 
-                      Click the settings icon on pads to adjust timestamps or delete them. Click pads to play!
-                    </p>
-                    
-                    {/* Auto-Quantize Button */}
-                    <div className="text-center mb-6">
-                      <button
-                        onClick={handleAutoQuantize}
-                        className="control-button px-6 py-3 font-semibold flex items-center space-x-2 mx-auto"
-                      >
-                        <Music className="w-5 h-5" />
-                        <span>Auto-Quantize (16 Parts)</span>
-                      </button>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Automatically divide the video into 16 equal parts and set each pad
-                      </p>
-                    </div>
-            
-            {/* Keyboard Layout */}
-            <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-600">
-              <div className="text-center text-sm text-gray-300 mb-3">Keyboard Controls</div>
-              <div className="grid grid-cols-4 gap-2 text-xs font-mono">
-                <div className="flex justify-center space-x-1">
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">4</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">5</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">6</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">7</kbd>
-                </div>
-                <div className="flex justify-center space-x-1">
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">R</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">T</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">Y</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">U</kbd>
-                </div>
-                <div className="flex justify-center space-x-1">
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">D</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">F</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">G</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">H</kbd>
-                </div>
-                <div className="flex justify-center space-x-1">
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">C</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">V</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">B</kbd>
-                  <kbd className="px-2 py-1 bg-gray-700 rounded border border-gray-600">N</kbd>
-                </div>
-              </div>
-              <div className="text-center mt-3">
-                <kbd className="px-4 py-1 bg-gray-700 rounded border border-gray-600 text-xs">SPACEBAR</kbd>
-                <span className="text-xs text-gray-400 ml-2">- Play/Pause</span>
-              </div>
-            </div>
-            
-            {/* Color Legend */}
-            <div className="flex justify-center space-x-6 mb-6 text-xs" style={{ color: 'var(--drum-machine-text-dim)' }}>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded border-2 border-gray-500 bg-gray-700"></div>
-                <span>Unset</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded border-2 border-green-500 bg-green-700"></div>
-                <span>Set</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 rounded border-2 border-blue-500 bg-blue-700"></div>
-                <span>Playing</span>
-              </div>
-            </div>
-            <DrumMachine
-              onPadTrigger={handlePadTrigger}
-              onPadStop={handlePadStop}
-              pads={pads}
-              onUpdatePad={handleUpdatePad}
-              selectedTimestamp={selectedTimestamp}
-              onTimestampSelect={setSelectedTimestamp}
-              onSetTimestampFromCurrentTime={handleSetTimestampFromCurrentTime}
-            />
-          </div>
-        )}
-
-        {/* Instructions */}
+        {/* Instructions when no video */}
         {!videoId && (
-          <div className="max-w-2xl mx-auto text-center">
-            <div className="drum-machine-panel p-8">
-              <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--drum-machine-text)' }}>How to Use</h2>
-              <div className="space-y-4" style={{ color: 'var(--drum-machine-text-dim)' }}>
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center text-white bg-black/50 backdrop-blur-sm rounded-lg p-8 max-w-2xl">
+              <h2 className="text-3xl font-bold mb-4">Welcome to ChopTube</h2>
+              <p className="text-xl mb-6 text-gray-300">
+                Turn any YouTube video into a drum machine
+              </p>
+              <div className="space-y-4 text-left">
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: 'var(--drum-machine-accent)' }}>1</div>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold bg-blue-500">1</div>
                   <p>Paste a YouTube URL above and click &quot;Load Video&quot;</p>
                 </div>
-                        <div className="flex items-start space-x-3">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: 'var(--drum-machine-accent)' }}>2</div>
-                          <p>Play the video and click any empty drum pad to set its timestamp to the current time</p>
-                        </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: 'var(--drum-machine-accent)' }}>3</div>
-                  <p>Click the pad to play that section of the video like a drum machine!</p>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold bg-blue-500">2</div>
+                  <p>Play the video and click any empty drum pad to set its timestamp</p>
+                </div>
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold bg-blue-500">3</div>
+                  <p>Click pads to play that section like a drum machine!</p>
                 </div>
               </div>
             </div>

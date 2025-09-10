@@ -117,45 +117,51 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6">
-      <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
+    <div className="w-full p-4">
+      <div className="grid grid-cols-4 gap-8 sm:gap-12 md:gap-16 max-w-4xl mx-auto">
         {pads.map((pad) => {
           const padState = pad.timestamp === 0 ? 'unset' : pad.isPlaying ? 'playing' : 'set';
           
           return (
-            <div key={pad.id} className="flex flex-col items-center space-y-3">
+            <div key={pad.id} className="flex flex-col items-center space-y-1 sm:space-y-2">
               <button
                 onClick={() => handlePadClick(pad)}
                 className={`
-                  drum-pad w-20 h-20 md:w-24 md:h-24
+                  drum-pad w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28
                   flex flex-col items-center justify-center
                   ${padState}
-                  relative
+                  relative backdrop-blur-sm group
                 `}
               >
-                {pad.isPlaying ? (
-                  <Square className="w-6 h-6 text-white" />
-                ) : (
-                  <div className="text-xs text-white font-mono opacity-80">
-                    {pad.timestamp > 0 ? formatTime(pad.timestamp) : ''}
+                {/* Two-row layout */}
+                <div className="flex flex-col items-center justify-center space-y-1">
+                  {/* Top row - Letter */}
+                  <div className="text-xs font-bold text-white bg-black/50 px-1 rounded">
+                    {getKeyForPad(pad.id)}
                   </div>
-                )}
-              </button>
-            
-            <div className="text-center space-y-2 w-full relative">
-              <div className="flex items-center justify-center space-x-1">
-                <div className="text-xs font-bold text-gray-300">
-                  {getKeyForPad(pad.id)}
+                  
+                  {/* Bottom row - Timestamp or Play icon */}
+                  {pad.isPlaying ? (
+                    <Square className="w-4 h-4 text-white" />
+                  ) : (
+                    <div className="text-xs text-white font-mono opacity-80">
+                      {pad.timestamp > 0 ? formatTime(pad.timestamp) : ''}
+                    </div>
+                  )}
                 </div>
+                
+                {/* Settings icon - top right corner */}
                 {pad.timestamp > 0 && (
                   <button
                     onClick={(e) => handleSettingsClick(pad.id, e)}
-                    className="w-3 h-3 text-gray-400 hover:text-gray-300 transition-colors opacity-60 hover:opacity-100"
+                    className="absolute top-1 right-1 w-3 h-3 text-white hover:text-gray-300 transition-all duration-200 opacity-0 group-hover:opacity-100 bg-black/50 rounded"
                   >
                     <Settings className="w-3 h-3" />
                   </button>
                 )}
-              </div>
+              </button>
+            
+            <div className="text-center space-y-1 w-full relative">
               
               {editingPad === pad.id && (
                 <div className="space-y-1">
@@ -230,16 +236,6 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
           </div>
         );
         })}
-      </div>
-      
-      <div className="mt-6 text-center">
-        <button
-          onClick={onPadStop}
-          className="control-button px-6 py-3 font-semibold flex items-center space-x-2 mx-auto"
-        >
-          <Square className="w-5 h-5" />
-          <span>Stop All</span>
-        </button>
       </div>
     </div>
   );

@@ -52,18 +52,20 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
       console.log('Creating YouTube player for video:', videoId);
       
       // Create new player with error handling
-      try {
-        playerInstanceRef.current = new window.YT.Player(playerRef.current, {
-          height: '315',
-          width: '560',
-          videoId: videoId,
-          playerVars: {
-            playsinline: 1,
-            controls: 1,
-            modestbranding: 1,
-            rel: 0,
-            enablejsapi: 1,
-          },
+            try {
+              playerInstanceRef.current = new window.YT.Player(playerRef.current, {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                  playsinline: 1,
+                  controls: 1,
+                  modestbranding: 1,
+                  rel: 0,
+                  enablejsapi: 1,
+                  autoplay: 0,
+                  mute: 0,
+                },
           events: {
             onReady: (event: YT.PlayerEvent) => {
               console.log('YouTube player ready');
@@ -93,8 +95,8 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
   }, [isAPIReady, videoId]); // Removed onPlayerReady and onPlayerStateChange from dependencies
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div ref={playerRef} className="w-full aspect-video bg-gray-900 rounded-lg overflow-hidden" />
+    <div className="absolute inset-0 w-full h-full youtube-player-container">
+      <div ref={playerRef} className="w-full h-full" />
     </div>
   );
 }
