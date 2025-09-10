@@ -235,7 +235,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [pads, handlePadTrigger, handlePadStop, handleSetTimestampFromCurrentTime]);
+  }, [pads, handlePadTrigger, handlePadStop, handleSetTimestampFromCurrentTime, player, isPlayerReady]);
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--drum-machine-bg)' }}>
@@ -400,7 +400,7 @@ export default function Home() {
               <div className="space-y-4" style={{ color: 'var(--drum-machine-text-dim)' }}>
                 <div className="flex items-start space-x-3">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: 'var(--drum-machine-accent)' }}>1</div>
-                  <p>Paste a YouTube URL above and click "Load Video"</p>
+                  <p>Paste a YouTube URL above and click &quot;Load Video&quot;</p>
                 </div>
                         <div className="flex items-start space-x-3">
                           <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-sm font-bold" style={{ background: 'var(--drum-machine-accent)' }}>2</div>

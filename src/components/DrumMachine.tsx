@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Play, Pause, Square, Plus, Minus, Settings } from 'lucide-react';
+import { Square, Plus, Minus, Settings } from 'lucide-react';
 
 interface DrumPad {
   id: number;
@@ -21,26 +21,8 @@ interface DrumMachineProps {
   onSetTimestampFromCurrentTime: (padId: number) => void;
 }
 
-const PAD_COLORS = [
-  'bg-red-500 hover:bg-red-600',
-  'bg-orange-500 hover:bg-orange-600',
-  'bg-yellow-500 hover:bg-yellow-600',
-  'bg-green-500 hover:bg-green-600',
-  'bg-blue-500 hover:bg-blue-600',
-  'bg-indigo-500 hover:bg-indigo-600',
-  'bg-purple-500 hover:bg-purple-600',
-  'bg-pink-500 hover:bg-pink-600',
-  'bg-cyan-500 hover:bg-cyan-600',
-  'bg-emerald-500 hover:bg-emerald-600',
-  'bg-amber-500 hover:bg-amber-600',
-  'bg-rose-500 hover:bg-rose-600',
-  'bg-violet-500 hover:bg-violet-600',
-  'bg-teal-500 hover:bg-teal-600',
-  'bg-lime-500 hover:bg-lime-600',
-  'bg-sky-500 hover:bg-sky-600',
-];
 
-export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onTimestampSelect, onSetTimestampFromCurrentTime }: DrumMachineProps) {
+export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onSetTimestampFromCurrentTime }: DrumMachineProps) {
   const [editingPad, setEditingPad] = useState<number | null>(null);
   const [tempTimestamp, setTempTimestamp] = useState<string>('');
   const [settingsPad, setSettingsPad] = useState<number | null>(null);
@@ -114,11 +96,6 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
     }
   };
 
-  const handleSetFromTimeline = (padId: number) => {
-    if (selectedTimestamp > 0) {
-      onUpdatePad(padId, selectedTimestamp);
-    }
-  };
 
   const handleDeleteTimestamp = (padId: number) => {
     onUpdatePad(padId, 0);

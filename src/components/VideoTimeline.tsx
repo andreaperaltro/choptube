@@ -88,9 +88,6 @@ export default function VideoTimeline({
     }
   };
 
-  const handleSetTimestamp = () => {
-    onTimestampSelect(currentTime);
-  };
 
   const progressPercentage = duration > 0 ? (currentTime / duration) * 100 : 0;
   const selectedPercentage = duration > 0 ? (selectedTimestamp / duration) * 100 : 0;
