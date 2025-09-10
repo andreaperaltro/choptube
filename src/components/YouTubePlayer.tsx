@@ -72,8 +72,6 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
                   disablekb: 0, // Keep keyboard controls
                   start: 0, // Start from beginning
                   end: 0, // No end time
-                  // Reduce quality for better mobile performance
-                  quality: 'medium',
                 },
           events: {
             onReady: (event: YT.PlayerEvent) => {
