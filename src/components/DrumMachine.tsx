@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Square, Plus, Minus, Settings } from 'lucide-react';
 
 interface DrumPad {
@@ -26,6 +26,8 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   const [editingPad, setEditingPad] = useState<number | null>(null);
   const [tempTimestamp, setTempTimestamp] = useState<string>('');
   const [settingsPad, setSettingsPad] = useState<number | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = useRef<boolean>(false);
 
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -73,6 +75,39 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
       onSetTimestampFromCurrentTime(pad.id);
     }
   }, [onPadTrigger, onSetTimestampFromCurrentTime]);
+
+  // Long press handlers for touch devices
+  const handleTouchStart = useCallback((pad: DrumPad, e: React.TouchEvent) => {
+    isLongPressRef.current = false;
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      if (pad.timestamp > 0) {
+        setSettingsPad(pad.id);
+      }
+    }, 500); // 500ms for long press
+  }, []);
+
+  const handleTouchEnd = useCallback((pad: DrumPad, e: React.TouchEvent) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    
+    // Only trigger pad function if it wasn't a long press
+    if (!isLongPressRef.current) {
+      handlePadClick(pad);
+    }
+    
+    isLongPressRef.current = false;
+  }, [handlePadClick]);
+
+  const handleTouchCancel = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    isLongPressRef.current = false;
+  }, []);
 
   const handlePadEdit = (pad: DrumPad) => {
     setEditingPad(pad.id);
@@ -126,6 +161,9 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
             <div key={pad.id} className="flex flex-col items-center space-y-1 sm:space-y-2">
               <button
                 onClick={() => handlePadClick(pad)}
+                onTouchStart={(e) => handleTouchStart(pad, e)}
+                onTouchEnd={(e) => handleTouchEnd(pad, e)}
+                onTouchCancel={handleTouchCancel}
                 className={`
                   drum-pad w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28
                   flex flex-col items-center justify-center

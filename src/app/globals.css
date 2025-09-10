@@ -97,6 +97,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   min-height: 80px;
   min-width: 80px;
   margin: 3vh;
+  /* Touch and mobile optimizations */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .drum-pad:hover {
@@ -157,6 +165,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   width: 100vw !important;
   height: 100vh !important;
   z-index: 0 !important;
+  /* Mobile performance optimizations */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Top bar full width styles */
@@ -177,6 +189,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   top: 0 !important;
   left: 0 !important;
   border: none !important;
+  /* Mobile performance optimizations */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+  /* Reduce rendering load */
+  image-rendering: optimizeSpeed;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 .control-button {

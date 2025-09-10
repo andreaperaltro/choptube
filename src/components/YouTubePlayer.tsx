@@ -65,6 +65,15 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
                   enablejsapi: 1,
                   autoplay: 0,
                   mute: 0,
+                  // Mobile performance optimizations
+                  iv_load_policy: 3, // Hide annotations
+                  cc_load_policy: 0, // Hide captions by default
+                  fs: 0, // Disable fullscreen button
+                  disablekb: 0, // Keep keyboard controls
+                  start: 0, // Start from beginning
+                  end: 0, // No end time
+                  // Reduce quality for better mobile performance
+                  quality: 'medium',
                 },
           events: {
             onReady: (event: YT.PlayerEvent) => {
