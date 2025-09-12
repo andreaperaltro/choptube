@@ -1,8 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Custom Font - PPNeueBit with Arial fallback */
+@font-face {
+  font-family: 'PPNeueBit';
+  src: url('/PPNeueBit-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PPNeueBit';
+  src: url('/PPNeueBit-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --foreground-rgb: 200, 200, 200;
@@ -27,13 +42,41 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  font-family: 'Inter', sans-serif;
+  font-family: 'PPNeueBit', Arial, sans-serif !important;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: var(--drum-machine-bg);
-  font-family: 'Inter', sans-serif;
+  font-family: 'PPNeueBit', Arial, sans-serif !important;
+}
+
+/* Force custom font throughout the entire app */
+* {
+  font-family: 'PPNeueBit', Arial, sans-serif !important;
+}
+
+/* Set default font size for elements without specific size */
+p, span, div, button, input, textarea, label, h1, h2, h3, h4, h5, h6 {
+  font-size: 1.5rem !important;
+}
+
+/* Override Tailwind font classes */
+.font-sans,
+.font-inter,
+.text-sm,
+.text-xs,
+.text-lg,
+.text-xl,
+.text-2xl,
+.text-3xl,
+.text-4xl,
+.text-5xl,
+.text-6xl,
+.text-7xl,
+.text-8xl,
+.text-9xl {
+  font-family: 'PPNeueBit', Arial, sans-serif !important;
 }
 
 a {
@@ -85,8 +128,82 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Mobile-specific improvements */
+@media (max-width: 640px) {
+  .drum-machine-panel {
+    margin: 0.5rem;
+    padding: 0.75rem;
+  }
+  
+  /* Ensure touch targets are at least 44px */
+  .drum-pad {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve text readability on small screens */
+  .drum-pad .text-xs {
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+  
+  .drum-pad .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.2;
+  }
+  
+  .drum-pad .text-\[10px\] {
+    font-size: 0.625rem;
+    line-height: 1.2;
+  }
+}
+
+/* Fix for settings button hover state */
+.group:hover .group-hover\:opacity-100 {
+  opacity: 1;
+}
+
+/* Settings icon jump animation */
+.drum-pad-settings {
+  position: absolute;
+  bottom: -8px;
+  right: 50%;
+  transform: translateX(50%) translateY(0);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.drum-pad-container:hover .drum-pad-settings {
+  opacity: 1 !important;
+  transform: translateX(50%) translateY(-12px) !important;
+  pointer-events: auto !important;
+}
+
+.drum-pad-container.touch-active .drum-pad-settings {
+  opacity: 1;
+  transform: translateX(50%) translateY(-12px);
+  pointer-events: auto;
+}
+
+.drum-pad-settings button {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  padding: 4px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  color: #000;
+}
+
+.drum-pad-settings button:hover {
+  background: rgba(255, 255, 255, 1);
+  color: #333;
+}
+
 .drum-pad {
-  background: #2a2a2a;
+  background: #707070;
   border: 3px solid #404040;
   border-radius: 12px;
   box-shadow: 
@@ -105,6 +222,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   /* Hardware acceleration */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  /* Better touch feedback */
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
 }
 
 .drum-pad:hover {
@@ -123,15 +243,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* Unset state - transparent dark */
 .drum-pad.unset {
-  background: rgba(42, 42, 42, 0.8);
-  border-color: rgba(64, 64, 64, 0.8);
+  background: rgba(121, 121, 121, 0.8);
+  border-color: rgba(116, 116, 116, 0.8);
   backdrop-filter: blur(4px);
 }
 
 /* Set state - transparent green */
 .drum-pad.set {
-  background: linear-gradient(135deg, rgba(45, 90, 45, 0.8), rgba(26, 61, 26, 0.8));
-  border-color: rgba(74, 124, 74, 0.8);
+  background: linear-gradient(135deg, rgba(31, 206, 31, 0.8), rgba(0, 118, 0, 0.8));
+  border-color: rgba(6, 237, 6, 0.8);
   backdrop-filter: blur(4px);
   box-shadow: 
     inset 0 2px 4px rgba(0, 0, 0, 0.2),
@@ -139,15 +259,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     0 0 8px rgba(74, 124, 74, 0.3);
 }
 
-/* Playing state - transparent blue */
+/* Playing state - red gradient */
 .drum-pad.playing {
-  background: linear-gradient(135deg, rgba(45, 74, 90, 0.8), rgba(26, 45, 61, 0.8));
-  border-color: rgba(74, 124, 156, 0.8);
+  background: linear-gradient(135deg, rgb(255, 0, 0), rgba(162, 0, 0, 0.8)) !important;
+  border-color: rgba(255, 0, 0, 0.8) !important;
   backdrop-filter: blur(4px);
   box-shadow: 
     inset 0 2px 4px rgba(0, 0, 0, 0.2),
     0 4px 8px rgba(0, 0, 0, 0.4),
-    0 0 12px rgba(74, 124, 156, 0.5);
+    0 0 12px rgba(255, 0, 0, 0.5) !important;
   animation: pulse 0.3s ease-in-out;
 }
 
@@ -178,8 +298,43 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   left: 0 !important;
   right: 0 !important;
   width: 100vw !important;
-  background: #000000 !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
   z-index: 20 !important;
+  padding: 0.75rem 1rem !important;
+}
+
+/* Force smaller icons in top bar */
+.top-controls-bar svg {
+  width: 0.5rem !important;
+  height: 0.5rem !important;
+}
+
+/* Force smaller text in top bar */
+.top-controls-bar h1 {
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+}
+
+/* Make control buttons more visible */
+.control-button {
+  background: rgba(59, 130, 246, 0.8) !important;
+  border: 1px solid rgba(59, 130, 246, 0.6) !important;
+  color: white !important;
+  transition: all 0.2s ease !important;
+}
+
+.control-button:hover {
+  background: rgba(59, 130, 246, 1) !important;
+  border-color: rgba(59, 130, 246, 1) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+.control-button:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3) !important;
 }
 
 .youtube-player-container iframe {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Square, Plus, Minus, Settings } from 'lucide-react';
+import { Plus, Minus, Settings } from 'lucide-react';
 
 interface DrumPad {
   id: number;
@@ -19,13 +19,15 @@ interface DrumMachineProps {
   selectedTimestamp: number;
   onTimestampSelect: (timestamp: number) => void;
   onSetTimestampFromCurrentTime: (padId: number) => void;
+  currentVideoTime?: number;
 }
 
 
-export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onSetTimestampFromCurrentTime }: DrumMachineProps) {
+export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onSetTimestampFromCurrentTime, currentVideoTime = 0 }: DrumMachineProps) {
   const [editingPad, setEditingPad] = useState<number | null>(null);
   const [tempTimestamp, setTempTimestamp] = useState<string>('');
   const [settingsPad, setSettingsPad] = useState<number | null>(null);
+  const [touchActivePad, setTouchActivePad] = useState<number | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressRef = useRef<boolean>(false);
 
@@ -67,7 +69,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   };
 
   const handlePadClick = useCallback((pad: DrumPad) => {
-    if (pad.timestamp > 0) {
+    if (pad.timestamp >= 0) {
       // Pad has a timestamp, play it
       onPadTrigger(pad.timestamp);
     } else {
@@ -79,9 +81,11 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   // Long press handlers for touch devices
   const handleTouchStart = useCallback((pad: DrumPad, e: React.TouchEvent) => {
     isLongPressRef.current = false;
+    setTouchActivePad(pad.id);
+    
     longPressTimerRef.current = setTimeout(() => {
       isLongPressRef.current = true;
-      if (pad.timestamp > 0) {
+      if (pad.timestamp >= 0) {
         setSettingsPad(pad.id);
       }
     }, 500); // 500ms for long press
@@ -92,6 +96,8 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    
+    setTouchActivePad(null);
     
     // Only trigger pad function if it wasn't a long press
     if (!isLongPressRef.current) {
@@ -106,12 +112,13 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+    setTouchActivePad(null);
     isLongPressRef.current = false;
   }, []);
 
   const handlePadEdit = (pad: DrumPad) => {
     setEditingPad(pad.id);
-    setTempTimestamp(pad.timestamp > 0 ? formatTime(pad.timestamp) : '');
+    setTempTimestamp(pad.timestamp >= 0 ? formatTime(pad.timestamp) : '');
   };
 
   const handleTimestampSave = () => {
@@ -125,7 +132,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
 
   const handleAdjustTimestamp = (padId: number, adjustment: number) => {
     const pad = pads.find(p => p.id === padId);
-    if (pad && pad.timestamp > 0) {
+    if (pad && pad.timestamp >= 0) {
       const newTimestamp = Math.max(0, pad.timestamp + adjustment);
       onUpdatePad(padId, newTimestamp);
     }
@@ -133,7 +140,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
 
 
   const handleDeleteTimestamp = (padId: number) => {
-    onUpdatePad(padId, 0);
+    onUpdatePad(padId, -1);
     setSettingsPad(null);
   };
 
@@ -152,52 +159,59 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   };
 
   return (
-    <div className="w-full p-4">
-      <div className="grid grid-cols-4 gap-8 sm:gap-12 md:gap-16 max-w-4xl mx-auto">
+    <div className="w-full p-2 sm:p-4">
+      <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-8 lg:gap-12 xl:gap-16 max-w-4xl mx-auto">
         {pads.map((pad) => {
-          const padState = pad.timestamp === 0 ? 'unset' : pad.isPlaying ? 'playing' : 'set';
+          const padState = pad.timestamp < 0 ? 'unset' : pad.isPlaying ? 'playing' : 'set';
+          const isNearCurrentTime = Math.abs(pad.timestamp - currentVideoTime) < 0.5; // Within 0.5 seconds
           
           return (
             <div key={pad.id} className="flex flex-col items-center space-y-1 sm:space-y-2">
-              <button
-                onClick={() => handlePadClick(pad)}
-                onTouchStart={(e) => handleTouchStart(pad, e)}
-                onTouchEnd={(e) => handleTouchEnd(pad, e)}
-                onTouchCancel={handleTouchCancel}
-                className={`
-                  drum-pad w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28
-                  flex flex-col items-center justify-center
-                  ${padState}
-                  relative backdrop-blur-sm group
-                `}
-              >
-                {/* Two-row layout */}
-                <div className="flex flex-col items-center justify-center space-y-1">
-                  {/* Top row - Letter */}
-                  <div className="text-xs font-bold text-white bg-black/50 px-1 rounded">
-                    {getKeyForPad(pad.id)}
+              <div className={`relative drum-pad-container ${touchActivePad === pad.id ? 'touch-active' : ''}`}>
+                <button
+                  onClick={() => handlePadClick(pad)}
+                  onTouchStart={(e) => handleTouchStart(pad, e)}
+                  onTouchEnd={(e) => handleTouchEnd(pad, e)}
+                  onTouchCancel={handleTouchCancel}
+                  className={`
+                    drum-pad w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28
+                    flex flex-col items-center justify-center
+                    ${padState}
+                    backdrop-blur-sm group
+                    min-h-[48px] min-w-[48px]
+                  `}
+                >
+                  {/* Two-row layout */}
+                  <div className="flex flex-col items-center justify-center space-y-1">
+                    {/* Top row - Letter */}
+                    <div className="text-xs sm:text-sm font-bold text-white bg-black/50 px-1 rounded">
+                      {getKeyForPad(pad.id)}
+                    </div>
+                    
+                    {/* Bottom row - Timestamp only */}
+                    <div className="text-[10px] sm:text-xs md:text-sm text-white font-mono opacity-80">
+                      {pad.timestamp >= 0 ? formatTime(pad.timestamp) : ''}
+                    </div>
                   </div>
                   
-                  {/* Bottom row - Timestamp or Play icon */}
-                  {pad.isPlaying ? (
-                    <Square className="w-4 h-4 text-white" />
-                  ) : (
-                    <div className="text-xs text-white font-mono opacity-80">
-                      {pad.timestamp > 0 ? formatTime(pad.timestamp) : ''}
-                    </div>
+                  {/* Current time indicator - bottom left corner */}
+                  {isNearCurrentTime && pad.timestamp > 0 && (
+                    <div className="absolute bottom-1 left-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse shadow-lg shadow-yellow-400/50" />
                   )}
-                </div>
+                </button>
                 
-                {/* Settings icon - top right corner */}
-                {pad.timestamp > 0 && (
-                  <button
-                    onClick={(e) => handleSettingsClick(pad.id, e)}
-                    className="absolute top-1 right-1 w-3 h-3 text-white hover:text-gray-300 transition-all duration-200 opacity-0 group-hover:opacity-100 bg-black/50 rounded"
-                  >
-                    <Settings className="w-3 h-3" />
-                  </button>
+                {/* Settings icon - jumping from below */}
+                {pad.timestamp >= 0 && (
+                  <div className="drum-pad-settings">
+                    <button
+                      onClick={(e) => handleSettingsClick(pad.id, e)}
+                      className="text-white hover:text-gray-300 transition-colors duration-200"
+                    >
+                      <Settings className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
-              </button>
+              </div>
             
             <div className="text-center space-y-1 w-full relative">
               
@@ -233,21 +247,21 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
               )}
               
               {/* Settings Panel */}
-              {settingsPad === pad.id && pad.timestamp > 0 && (
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 p-3 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-20 min-w-[200px]">
-                  <div className="space-y-2">
-                    <div className="text-xs text-gray-300 mb-2">Adjust Timestamp</div>
+              {settingsPad === pad.id && pad.timestamp >= 0 && (
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 p-2 sm:p-3 bg-white border border-gray-300 rounded-lg shadow-lg z-20 min-w-[180px] sm:min-w-[200px] max-w-[90vw]">
+                  <div className="space-y-2 bg-white rounded">
+                    <div className="text-xs text-gray-700 mb-2 bg-white px-1 py-0.5 rounded">Adjust Timestamp</div>
                     
                     <div className="flex space-x-1">
                       <button
                         onClick={() => handleAdjustTimestamp(pad.id, -1)}
-                        className="control-button px-2 py-1 text-xs flex-1 flex items-center justify-center"
+                        className="px-2 py-1 text-xs flex-1 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => handleAdjustTimestamp(pad.id, 1)}
-                        className="control-button px-2 py-1 text-xs flex-1 flex items-center justify-center"
+                        className="px-2 py-1 text-xs flex-1 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -256,13 +270,13 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
                     <div className="flex space-x-1">
                       <button
                         onClick={() => handlePadEdit(pad)}
-                        className="control-button px-2 py-1 text-xs flex-1"
+                        className="px-2 py-1 text-xs flex-1 bg-gray-500 hover:bg-gray-600 text-white rounded transition-colors"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDeleteTimestamp(pad.id)}
-                        className="control-button px-2 py-1 text-xs flex-1 bg-red-600 hover:bg-red-700"
+                        className="px-2 py-1 text-xs flex-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                       >
                         Delete
                       </button>

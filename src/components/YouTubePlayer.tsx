@@ -6,6 +6,7 @@ interface YouTubePlayerProps {
   videoId: string;
   onPlayerReady: (player: YT.Player) => void;
   onPlayerStateChange?: (event: YT.OnStateChangeEvent) => void;
+  onError?: (error: string) => void;
 }
 
 declare global {
@@ -15,7 +16,7 @@ declare global {
   }
 }
 
-export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateChange }: YouTubePlayerProps) {
+export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateChange, onError }: YouTubePlayerProps) {
   const playerRef = useRef<HTMLDivElement>(null);
   const playerInstanceRef = useRef<YT.Player | null>(null);
   const [isAPIReady, setIsAPIReady] = useState(false);
@@ -84,6 +85,27 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
             },
             onError: (event: YT.OnErrorEvent) => {
               console.error('YouTube player error:', event.data);
+              let errorMessage = 'An error occurred while loading the video.';
+              
+              switch (event.data) {
+                case 2:
+                  errorMessage = 'Invalid video ID. Please check the YouTube URL.';
+                  break;
+                case 5:
+                  errorMessage = 'The video is not available or has been removed.';
+                  break;
+                case 100:
+                  errorMessage = 'The video is not available in your region.';
+                  break;
+                case 101:
+                case 150:
+                  errorMessage = 'The video owner has disabled embedding.';
+                  break;
+                default:
+                  errorMessage = `Video error (${event.data}). Please try a different video.`;
+              }
+              
+              onError?.(errorMessage);
             },
           },
         });
