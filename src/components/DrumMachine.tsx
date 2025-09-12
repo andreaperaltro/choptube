@@ -24,7 +24,7 @@ interface DrumMachineProps {
 }
 
 
-export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onSetTimestampFromCurrentTime, currentVideoTime = 0, isRightSide = false }: DrumMachineProps) {
+export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads, onUpdatePad, selectedTimestamp: _selectedTimestamp, onSetTimestampFromCurrentTime, currentVideoTime = 0, isRightSide = false }: DrumMachineProps) {
   const [editingPad, setEditingPad] = useState<number | null>(null);
   const [tempTimestamp, setTempTimestamp] = useState<string>('');
   const [settingsPad, setSettingsPad] = useState<number | null>(null);
@@ -92,7 +92,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   }, [onPadTrigger, onSetTimestampFromCurrentTime]);
 
   // Long press handlers for touch devices
-  const handleTouchStart = useCallback((pad: DrumPad, e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((pad: DrumPad, _e: React.TouchEvent) => {
     isLongPressRef.current = false;
     setTouchActivePad(pad.id);
     
