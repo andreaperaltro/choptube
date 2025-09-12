@@ -4,7 +4,6 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Music, ExternalLink, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
-import VideoTimeline from '@/components/VideoTimeline';
 
 interface DrumPad {
   id: number;
@@ -698,7 +697,7 @@ export default function Home() {
                 <div className="text-center max-w-md">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to ChopTube</h2>
                   <div className="space-y-3 text-gray-300">
-                    <p>1. Paste a YouTube URL above and click "Load Video"</p>
+                    <p>1. Paste a YouTube URL above and click &quot;Load Video&quot;</p>
                     <p>2. Play the video and click any empty drum pad to set its timestamp</p>
                     <p>3. Click pads to play that section like a drum machine!</p>
                     <p>4. Use keyboard shortcuts (1-4, Q-R, A-F, Z-V) for quick access</p>
@@ -840,7 +839,7 @@ export default function Home() {
                 <div className="text-center max-w-md">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to ChopTube</h2>
                   <div className="space-y-3 text-gray-300">
-                    <p>1. Paste a YouTube URL above and click "Load Video"</p>
+                    <p>1. Paste a YouTube URL above and click &quot;Load Video&quot;</p>
                     <p>2. Play the video and click any empty drum pad to set its timestamp</p>
                     <p>3. Click pads to play that section like a drum machine!</p>
                     <p>4. Use keyboard shortcuts (7-0, U-P, H-L, B-,) for quick access</p>

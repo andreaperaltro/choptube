@@ -104,7 +104,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
     }, 500); // 500ms for long press
   }, []);
 
-  const handleTouchEnd = useCallback((pad: DrumPad, e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((pad: DrumPad, _e: React.TouchEvent) => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;

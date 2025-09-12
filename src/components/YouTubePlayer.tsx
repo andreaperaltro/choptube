@@ -126,7 +126,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
               const interval = setInterval(hideEndScreenElements, 500);
               
               // Store interval reference for cleanup
-              (event.target as any)._hideInterval = interval;
+              (event.target as YT.Player & { _hideInterval?: NodeJS.Timeout })._hideInterval = interval;
               
               onPlayerReady(event.target);
             },
@@ -192,7 +192,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
         console.log('Destroying YouTube player');
         
         // Clean up the hide interval
-        const interval = (playerInstanceRef.current as any)._hideInterval;
+        const interval = (playerInstanceRef.current as YT.Player & { _hideInterval?: NodeJS.Timeout })._hideInterval;
         if (interval) {
           clearInterval(interval);
         }
@@ -201,7 +201,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
         playerInstanceRef.current = null;
       }
     };
-  }, [isAPIReady, videoId]); // Removed onPlayerReady and onPlayerStateChange from dependencies
+  }, [isAPIReady, videoId, onPlayerReady, onPlayerStateChange, onError]);
 
   return (
     <div className="w-full h-full youtube-player-container">
