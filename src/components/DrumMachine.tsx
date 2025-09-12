@@ -20,10 +20,11 @@ interface DrumMachineProps {
   onTimestampSelect: (timestamp: number) => void;
   onSetTimestampFromCurrentTime: (padId: number) => void;
   currentVideoTime?: number;
+  isRightSide?: boolean; // New prop to distinguish Video 1 vs Video 2
 }
 
 
-export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onSetTimestampFromCurrentTime, currentVideoTime = 0 }: DrumMachineProps) {
+export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad, selectedTimestamp, onSetTimestampFromCurrentTime, currentVideoTime = 0, isRightSide = false }: DrumMachineProps) {
   const [editingPad, setEditingPad] = useState<number | null>(null);
   const [tempTimestamp, setTempTimestamp] = useState<string>('');
   const [settingsPad, setSettingsPad] = useState<number | null>(null);
@@ -38,13 +39,25 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
   };
 
   const getKeyForPad = (padId: number): string => {
-    const keyMap: { [key: number]: string } = {
-      0: '4', 1: '5', 2: '6', 3: '7',
-      4: 'R', 5: 'T', 6: 'Y', 7: 'U',
-      8: 'D', 9: 'F', 10: 'G', 11: 'H',
-      12: 'C', 13: 'V', 14: 'B', 15: 'N',
-    };
-    return keyMap[padId] || '';
+    if (isRightSide) {
+      // Video 2 (right side) key mapping
+      const keyMap: { [key: number]: string } = {
+        0: '7', 1: '8', 2: '9', 3: '0',
+        4: 'U', 5: 'I', 6: 'O', 7: 'P',
+        8: 'H', 9: 'J', 10: 'K', 11: 'L',
+        12: 'B', 13: 'N', 14: 'M', 15: ',',
+      };
+      return keyMap[padId] || '';
+    } else {
+      // Video 1 (left side) key mapping
+      const keyMap: { [key: number]: string } = {
+        0: '1', 1: '2', 2: '3', 3: '4',
+        4: 'Q', 5: 'W', 6: 'E', 7: 'R',
+        8: 'A', 9: 'S', 10: 'D', 11: 'F',
+        12: 'Z', 13: 'X', 14: 'C', 15: 'V',
+      };
+      return keyMap[padId] || '';
+    }
   };
 
   const parseTimeInput = (input: string): number => {
@@ -160,13 +173,13 @@ export default function DrumMachine({ onPadTrigger, onPadStop, pads, onUpdatePad
 
   return (
     <div className="w-full p-2 sm:p-4">
-      <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-8 lg:gap-12 xl:gap-16 max-w-4xl mx-auto">
+      <div className="grid grid-cols-4 gap-1 sm:gap-2 md:gap-3 lg:gap-4 xl:gap-6 max-w-4xl mx-auto p-2 sm:p-4">
         {pads.map((pad) => {
           const padState = pad.timestamp < 0 ? 'unset' : pad.isPlaying ? 'playing' : 'set';
           const isNearCurrentTime = Math.abs(pad.timestamp - currentVideoTime) < 0.5; // Within 0.5 seconds
           
           return (
-            <div key={pad.id} className="flex flex-col items-center space-y-1 sm:space-y-2">
+            <div key={pad.id} className="flex flex-col items-center space-y-1 sm:space-y-2 p-1">
               <div className={`relative drum-pad-container ${touchActivePad === pad.id ? 'touch-active' : ''}`}>
                 <button
                   onClick={() => handlePadClick(pad)}

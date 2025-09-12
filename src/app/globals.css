@@ -277,14 +277,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   100% { transform: scale(1); }
 }
 
-/* YouTube player fullscreen styles */
+/* YouTube player container styles */
 .youtube-player-container {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 0 !important;
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
   /* Mobile performance optimizations */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -293,28 +292,24 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* Top bar full width styles */
 .top-controls-bar {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100vw !important;
-  background: rgba(0, 0, 0, 0.9) !important;
+  position: relative !important;
+  width: 100% !important;
+  background: rgba(0, 0, 0, 0.95) !important;
   backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
-  z-index: 20 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3) !important;
   padding: 0.75rem 1rem !important;
 }
 
-/* Force smaller icons in top bar */
+/* Force icons in top bar */
 .top-controls-bar svg {
-  width: 0.5rem !important;
-  height: 0.5rem !important;
+  width: 1rem !important;
+  height: 1rem !important;
 }
 
-/* Force smaller text in top bar */
+/* Force text in top bar */
 .top-controls-bar h1 {
-  font-size: 0.75rem !important;
-  font-weight: 500 !important;
+  font-size: 1.25rem !important;
+  font-weight: 600 !important;
 }
 
 /* Make control buttons more visible */
@@ -340,10 +335,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .youtube-player-container iframe {
   width: 100% !important;
   height: 100% !important;
-  position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
+  position: relative !important;
   border: none !important;
+  max-width: 100% !important;
   /* Mobile performance optimizations */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -437,4 +431,75 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   cursor: pointer;
   border: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Hide YouTube end screen and related videos */
+.youtube-player-container {
+  overflow: hidden !important;
+  position: relative !important;
+  /* Add a mask to crop the bottom more aggressively */
+  -webkit-mask: linear-gradient(to bottom, black 0%, black 85%, transparent 100%) !important;
+  mask: linear-gradient(to bottom, black 0%, black 85%, transparent 100%) !important;
+}
+
+.youtube-player-container iframe {
+  pointer-events: auto !important;
+  /* Make iframe larger and crop more aggressively */
+  height: 120% !important;
+  width: 100% !important;
+  transform: translateY(-8%) !important;
+  /* Try to prevent interaction with bottom area */
+  position: relative !important;
+}
+
+/* Add an overlay to block the bottom area where suggestions appear */
+.youtube-player-container::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 20% !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+}
+
+/* Hide YouTube's end screen overlay and suggestions - more comprehensive */
+.ytp-endscreen-content,
+.ytp-ce-element,
+.ytp-cards-teaser,
+.ytp-pause-overlay,
+.html5-endscreen,
+.ytp-scroll-min,
+.ytp-scroll-max,
+.ytp-endscreen-paginate,
+.ytp-show-tiles,
+.ytp-related-on-error-overlay,
+.ytp-videowall-still,
+.ytp-endscreen-previous,
+.ytp-endscreen-next {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Hide YouTube watermark and branding */
+.ytp-watermark,
+.ytp-chrome-top-buttons {
+  display: none !important;
+}
+
+/* Target the specific pause overlay mentioned in Stack Overflow */
+.ytp-scroll-min.ytp-pause-overlay {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Hide any remaining suggestion overlays */
+[class*="ytp-endscreen"],
+[class*="ytp-related"],
+[class*="ytp-suggestion"] {
+  display: none !important;
 }

@@ -59,28 +59,101 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
                 width: '100%',
                 videoId: videoId,
                 playerVars: {
+                  // Core functionality
                   playsinline: 1,
-                  controls: 1,
-                  modestbranding: 1,
-                  rel: 0,
                   enablejsapi: 1,
+                  origin: window.location.origin,
+                  
+                  // Player behavior
                   autoplay: 0,
                   mute: 0,
-                  // Mobile performance optimizations
-                  iv_load_policy: 3, // Hide annotations
-                  cc_load_policy: 0, // Hide captions by default
-                  fs: 0, // Disable fullscreen button
-                  disablekb: 0, // Keep keyboard controls
+                  controls: 1,
+                  disablekb: 0, // Keep keyboard controls for accessibility
+                  
+                  // Visual customization (current parameters)
+                  modestbranding: 1, // Reduce YouTube branding
+                  color: 'white', // White progress bar
+                  
+                  // Hide distracting elements
+                  rel: 0, // Show only related videos from same channel (post-2018 limitation)
+                  iv_load_policy: 3, // Hide video annotations
+                  cc_load_policy: 0, // Hide closed captions by default
+                  fs: 1, // Allow fullscreen (removing this might help with end screens)
+                  
+                  // Additional parameters from official docs
                   start: 0, // Start from beginning
-                  end: 0, // No end time
+                  widget_referrer: window.location.origin,
                 },
           events: {
             onReady: (event: YT.PlayerEvent) => {
               console.log('YouTube player ready');
+              
+              // Set up a continuous monitor to hide suggestion elements
+              const hideEndScreenElements = () => {
+                try {
+                  // Target the container around the iframe
+                  const container = playerRef.current?.parentElement;
+                  if (container) {
+                    // Hide any YouTube suggestion overlays that might appear
+                    const selectors = [
+                      '.ytp-endscreen-content',
+                      '.ytp-ce-element', 
+                      '.ytp-cards-teaser',
+                      '.ytp-pause-overlay',
+                      '.html5-endscreen',
+                      '.ytp-scroll-min',
+                      '.ytp-videowall-still',
+                      '[class*="endscreen"]',
+                      '[class*="related"]'
+                    ];
+                    
+                    selectors.forEach(selector => {
+                      const elements = container.querySelectorAll(selector);
+                      elements.forEach((el: Element) => {
+                        (el as HTMLElement).style.display = 'none';
+                        (el as HTMLElement).style.visibility = 'hidden';
+                        (el as HTMLElement).style.opacity = '0';
+                      });
+                    });
+                  }
+                } catch (e) {
+                  // Silently handle any errors
+                }
+              };
+              
+              // Run immediately and then every 500ms
+              hideEndScreenElements();
+              const interval = setInterval(hideEndScreenElements, 500);
+              
+              // Store interval reference for cleanup
+              (event.target as any)._hideInterval = interval;
+              
               onPlayerReady(event.target);
             },
             onStateChange: (event: YT.OnStateChangeEvent) => {
               console.log('YouTube player state changed:', event.data);
+              
+              // Hide end screen when video ends
+              if (event.data === YT.PlayerState.ENDED) {
+                setTimeout(() => {
+                  // Try to hide end screen elements that might appear
+                  const iframe = event.target.getIframe();
+                  if (iframe && iframe.contentDocument) {
+                    try {
+                      const endScreenElements = iframe.contentDocument.querySelectorAll(
+                        '.ytp-endscreen-content, .ytp-ce-element, .html5-endscreen'
+                      );
+                      endScreenElements.forEach((el: Element) => {
+                        (el as HTMLElement).style.display = 'none';
+                      });
+                    } catch (e) {
+                      // Cross-origin restrictions may prevent this
+                      console.log('Cannot access iframe content due to CORS');
+                    }
+                  }
+                }, 100);
+              }
+              
               onPlayerStateChange?.(event);
             },
             onError: (event: YT.OnErrorEvent) => {
@@ -117,6 +190,13 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
     return () => {
       if (playerInstanceRef.current) {
         console.log('Destroying YouTube player');
+        
+        // Clean up the hide interval
+        const interval = (playerInstanceRef.current as any)._hideInterval;
+        if (interval) {
+          clearInterval(interval);
+        }
+        
         playerInstanceRef.current.destroy();
         playerInstanceRef.current = null;
       }
@@ -124,7 +204,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
   }, [isAPIReady, videoId]); // Removed onPlayerReady and onPlayerStateChange from dependencies
 
   return (
-    <div className="absolute inset-0 w-full h-full youtube-player-container">
+    <div className="w-full h-full youtube-player-container">
       <div ref={playerRef} className="w-full h-full" />
     </div>
   );
