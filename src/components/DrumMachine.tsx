@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Plus, Minus, Settings } from 'lucide-react';
 
 interface DrumPad {
   id: number;
@@ -220,7 +219,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads,
                       onClick={(e) => handleSettingsClick(pad.id, e)}
                       className="text-white hover:text-gray-300 transition-colors duration-200"
                     >
-                      <Settings className="w-4 h-4" />
+                      SET
                     </button>
                   </div>
                 )}
@@ -270,13 +269,13 @@ export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads,
                         onClick={() => handleAdjustTimestamp(pad.id, -1)}
                         className="px-2 py-1 text-xs flex-1 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
                       >
-                        <Minus className="w-3 h-3" />
+                        -
                       </button>
                       <button
                         onClick={() => handleAdjustTimestamp(pad.id, 1)}
                         className="px-2 py-1 text-xs flex-1 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
                       >
-                        <Plus className="w-3 h-3" />
+                        +
                       </button>
                     </div>
                     

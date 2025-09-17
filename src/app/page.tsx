@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Music, ExternalLink, Loader2, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import Image from 'next/image';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
 
@@ -565,17 +565,22 @@ export default function Home() {
           <div className="flex items-center justify-between gap-2">
             {/* Logo */}
             <div className="flex items-center">
-              <h1 className="text-lg font-medium text-white">ChopTube</h1>
+              <Image 
+                src="/choptube-logo.svg" 
+                alt="ChopTube Logo" 
+                width={60} 
+                height={24}
+                className="h-6 w-auto"
+              />
             </div>
             
             {/* Help Button */}
             <button
               onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
-              className="control-button px-3 py-2 font-medium flex items-center gap-2 text-sm"
+              className="control-button font-medium text-sm"
               title="Show keyboard shortcuts"
             >
-              <Info className="w-4 h-4" />
-              <span>Help</span>
+              HELP
             </button>
           </div>
 
@@ -585,7 +590,7 @@ export default function Home() {
       {/* Dual Column Layout */}
       <div className="flex flex-row min-h-screen">
         {/* Video 1 Column */}
-        <div className="flex-1 flex flex-col relative">
+        <div className="flex-1 flex flex-col relative border-r border-white">
           {/* Video 1 Background - Full Column */}
           {videoId1 && (
             <div className="absolute inset-0 z-0 w-full h-full">
@@ -599,21 +604,21 @@ export default function Home() {
           )}
 
           {/* Video 1 Content */}
-          <div className="relative z-10 flex-1 flex flex-col">
+          <div className="relative z-10 flex-1 flex flex-col px-4">
             {/* Video 1 Controls */}
-            <div className="bg-black/80 backdrop-blur-sm p-4 border-b border-gray-600 relative z-10">
-              <div className="flex items-center gap-3">
+            <div className="bg-black/80 backdrop-blur-sm px-8 py-6 border-b border-gray-600 relative z-10">
+              <div className="flex items-center gap-3 min-h-[44px]">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 1</h2>
                 
                 {/* Video 1 URL Input */}
-                <form onSubmit={handleUrlSubmit1} className="flex gap-2 flex-1">
+                <form onSubmit={handleUrlSubmit1} className="flex gap-2 flex-1 items-center">
                   <div className="flex-1 relative">
                     <input
                       type="url"
                       value={videoUrl1}
                       onChange={(e) => setVideoUrl1(e.target.value)}
                       placeholder="YouTube URL for Video 1..."
-                      className={`w-full px-3 py-2 rounded border text-white placeholder-gray-400 focus:outline-none focus:ring-1 text-sm ${
+                      className={`w-full px-3 py-2 rounded border text-white placeholder-gray-400 focus:outline-none focus:ring-1 text-sm h-[32px] ${
                         error1 
                           ? 'border-red-500 bg-red-900/20 focus:ring-red-500' 
                           : isPlayerReady1 
@@ -622,29 +627,14 @@ export default function Home() {
                       }`}
                       disabled={isLoading1}
                     />
-                    {/* Status indicator */}
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                      {isLoading1 ? (
-                        <Loader2 className="w-2 h-2 text-blue-400 animate-spin" />
-                      ) : error1 ? (
-                        <AlertCircle className="w-2 h-2 text-red-400" />
-                      ) : isPlayerReady1 ? (
-                        <CheckCircle className="w-2 h-2 text-green-400" />
-                      ) : null}
-                    </div>
                   </div>
                   <button
                     type={buttonText1 === 'Paste' ? 'button' : 'submit'}
                     onClick={buttonText1 === 'Paste' ? handlePaste1 : undefined}
                     disabled={isLoading1}
-                    className="control-button px-3 py-2 text-sm"
+                    className="control-button text-sm"
                   >
-                    {isLoading1 ? (
-                      <Loader2 className="w-2 h-2 animate-spin" />
-                    ) : (
-                      <ExternalLink className="w-2 h-2" />
-                    )}
-                    {isLoading1 ? 'Loading...' : buttonText1}
+                    {isLoading1 ? 'LOADING...' : buttonText1.toUpperCase()}
                   </button>
                 </form>
                 
@@ -652,11 +642,10 @@ export default function Home() {
                 {isPlayerReady1 && (
                   <button
                     onClick={handleAutoQuantize1}
-                    className="control-button px-3 py-2 text-sm"
+                    className="control-button text-sm"
                     title="Auto-quantize video 1"
                   >
-                    <Music className="w-4 h-4" />
-                    Auto-Quantize
+                    AUTO-QUANTIZE
                   </button>
                 )}
               </div>
@@ -678,7 +667,7 @@ export default function Home() {
 
             {/* Video 1 Content */}
             {isPlayerReady1 ? (
-              <div className="flex-1 flex items-center justify-center p-4">
+              <div className="flex-1 flex items-center justify-center px-12 py-8">
                 <div className="w-full max-w-2xl">
                   <DrumMachine
                     onPadTrigger={handlePadTrigger1}
@@ -693,7 +682,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center p-8">
+              <div className="flex-1 flex items-center justify-center px-16 py-12">
                 <div className="text-center max-w-md">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to ChopTube</h2>
                   <div className="space-y-3 text-gray-300">
@@ -740,21 +729,21 @@ export default function Home() {
           )}
 
           {/* Video 2 Content */}
-          <div className="relative z-10 flex-1 flex flex-col">
+          <div className="relative z-10 flex-1 flex flex-col px-4">
             {/* Video 2 Controls */}
-            <div className="bg-black/80 backdrop-blur-sm p-4 border-b border-gray-600 relative z-10">
-              <div className="flex items-center gap-3">
+            <div className="bg-black/80 backdrop-blur-sm px-8 py-6 border-b border-gray-600 relative z-10">
+              <div className="flex items-center gap-3 min-h-[44px]">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 2</h2>
                 
                 {/* Video 2 URL Input */}
-                <form onSubmit={handleUrlSubmit2} className="flex gap-2 flex-1">
+                <form onSubmit={handleUrlSubmit2} className="flex gap-2 flex-1 items-center">
                   <div className="flex-1 relative">
                     <input
                       type="url"
                       value={videoUrl2}
                       onChange={(e) => setVideoUrl2(e.target.value)}
                       placeholder="YouTube URL for Video 2..."
-                      className={`w-full px-3 py-2 rounded border text-white placeholder-gray-400 focus:outline-none focus:ring-1 text-sm ${
+                      className={`w-full px-3 py-2 rounded border text-white placeholder-gray-400 focus:outline-none focus:ring-1 text-sm h-[32px] ${
                         error2 
                           ? 'border-red-500 bg-red-900/20 focus:ring-red-500' 
                           : isPlayerReady2 
@@ -763,29 +752,14 @@ export default function Home() {
                       }`}
                       disabled={isLoading2}
                     />
-                    {/* Status indicator */}
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                      {isLoading2 ? (
-                        <Loader2 className="w-2 h-2 text-blue-400 animate-spin" />
-                      ) : error2 ? (
-                        <AlertCircle className="w-2 h-2 text-red-400" />
-                      ) : isPlayerReady2 ? (
-                        <CheckCircle className="w-2 h-2 text-green-400" />
-                      ) : null}
-                    </div>
                   </div>
                   <button
                     type={buttonText2 === 'Paste' ? 'button' : 'submit'}
                     onClick={buttonText2 === 'Paste' ? handlePaste2 : undefined}
                     disabled={isLoading2}
-                    className="control-button px-3 py-2 text-sm"
+                    className="control-button text-sm"
                   >
-                    {isLoading2 ? (
-                      <Loader2 className="w-2 h-2 animate-spin" />
-                    ) : (
-                      <ExternalLink className="w-2 h-2" />
-                    )}
-                    {isLoading2 ? 'Loading...' : buttonText2}
+                    {isLoading2 ? 'LOADING...' : buttonText2.toUpperCase()}
                   </button>
                 </form>
                 
@@ -793,11 +767,10 @@ export default function Home() {
                 {isPlayerReady2 && (
                   <button
                     onClick={handleAutoQuantize2}
-                    className="control-button px-3 py-2 text-sm"
+                    className="control-button text-sm"
                     title="Auto-quantize video 2"
                   >
-                    <Music className="w-4 h-4" />
-                    Auto-Quantize
+                    AUTO-QUANTIZE
                   </button>
                 )}
               </div>
@@ -819,7 +792,7 @@ export default function Home() {
 
             {/* Video 2 Content */}
             {isPlayerReady2 ? (
-              <div className="flex-1 flex items-center justify-center p-4">
+              <div className="flex-1 flex items-center justify-center px-12 py-8">
                 <div className="w-full max-w-2xl">
                   <DrumMachine
                     onPadTrigger={handlePadTrigger2}
@@ -835,7 +808,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center p-8">
+              <div className="flex-1 flex items-center justify-center px-16 py-12">
                 <div className="text-center max-w-md">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to ChopTube</h2>
                   <div className="space-y-3 text-gray-300">
@@ -870,8 +843,8 @@ export default function Home() {
 
       {/* Keyboard Help Overlay */}
       {showKeyboardHelp && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-600 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-8">
+          <div className="bg-gray-900 border border-gray-600 rounded-lg p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Keyboard Shortcuts</h3>
               <button
