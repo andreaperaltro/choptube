@@ -78,3 +78,28 @@ export function clearPlaylistData(): void {
   // Reload the page to reflect changes
   window.location.reload();
 }
+
+/**
+ * Nuclear option: Clear all localStorage and force reload
+ */
+export function nuclearClear(): void {
+  if (typeof window === 'undefined') return;
+  
+  console.log('🧹 NUCLEAR CLEAR: Removing all ChopTube data...');
+  
+  // Clear all localStorage keys
+  const keysToRemove = [
+    'choptube-playlist',
+    'choptube-project', 
+    'choptube.dev'
+  ];
+  
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`🧹 Removed ${key} from localStorage`);
+  });
+  
+  // Force reload
+  console.log('🧹 Nuclear clear complete, reloading...');
+  window.location.reload();
+}

@@ -24,6 +24,7 @@ export default function PlaylistPage() {
     removePad,
     // reorderPads, // TODO: Implement drag and drop functionality
     clear,
+    forceClear,
     getVideoCount,
     getTotalPadsCount
   } = usePlaylistStore();
@@ -312,6 +313,21 @@ export default function PlaylistPage() {
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
             >
               Debug
+            </button>
+            <button
+              onClick={async () => {
+                const confirmed = await showDangerConfirm(
+                  `FORCE CLEAR: This will bypass the store and directly clear localStorage, then reload the page. This is a nuclear option.`,
+                  'Force Clear All Data'
+                );
+                if (confirmed) {
+                  console.log('🧹 Force clearing all data...');
+                  forceClear();
+                }
+              }}
+              className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+            >
+              Force Clear
             </button>
           </div>
         </div>

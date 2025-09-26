@@ -24,7 +24,7 @@ import { playlistPreloader } from '@/lib/playlist/PlaylistPreloader';
 import { PRELOAD_CONFIG } from '@/lib/config';
 import { useDevUI } from '@/lib/DevUIContext';
 import { showSuccess, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
-import { clearAllChopTubeData, debugPlaylistData, clearPlaylistData } from '@/lib/utils/debug';
+import { clearAllChopTubeData, debugPlaylistData, clearPlaylistData, nuclearClear } from '@/lib/utils/debug';
 import Link from 'next/link';
 
 interface DrumPad {
@@ -1561,15 +1561,23 @@ export default function Home() {
               >
                 Clear Playlist
               </button>
-              <button
-                onClick={() => {
-                  clearAllChopTubeData();
-                  window.location.reload();
-                }}
-                className="px-2 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
-              >
-                Clear All
-              </button>
+            <button
+              onClick={() => {
+                clearAllChopTubeData();
+                window.location.reload();
+              }}
+              className="px-2 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={() => {
+                nuclearClear();
+              }}
+              className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+            >
+              Nuclear Clear
+            </button>
             </div>
           </div>
         </div>

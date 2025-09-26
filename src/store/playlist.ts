@@ -37,6 +37,7 @@ interface PlaylistState {
   removePad: (videoId: string, index: number) => void;
   reorderPads: (videoId: string, from: number, to: number) => void;
   clear: () => void;
+  forceClear: () => void;
   
   // Utility actions
   getVideo: (videoId: string) => PlaylistVideo | undefined;
@@ -170,10 +171,27 @@ export const usePlaylistStore = create<PlaylistState>()(
        * Clear all videos from the playlist
        */
       clear: () => {
+        console.log('🧹 Store clear called, current videos:', get().videos.length);
         set({ videos: [] });
         // Force clear localStorage as well to ensure it's completely cleared
         if (typeof window !== 'undefined') {
           localStorage.removeItem('choptube-playlist');
+          console.log('🧹 localStorage cleared');
+        }
+      },
+
+      /**
+       * Force clear - bypasses store and directly clears localStorage
+       */
+      forceClear: () => {
+        console.log('🧹 Force clear called');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('choptube-playlist');
+          console.log('🧹 localStorage force cleared');
+          // Force store update
+          set({ videos: [] });
+          // Reload page to ensure clean state
+          window.location.reload();
         }
       },
 
@@ -210,6 +228,11 @@ export const usePlaylistStore = create<PlaylistState>()(
       partialize: (state) => ({
         videos: state.videos, // Only persist the videos array
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          console.log('🔄 Playlist store rehydrated with', state.videos.length, 'videos');
+        }
+      },
     }
   )
 );
