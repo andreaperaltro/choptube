@@ -115,7 +115,7 @@ export default function Home() {
   }, [allReady, tracks.length]);
 
   // Playlist store
-  const { getVideo, getAllVideos } = usePlaylistStore();
+  const { getVideo, getAllVideos, clear } = usePlaylistStore();
   const playlistVideos = getAllVideos();
 
   // Clean up preloaded players when playlist videos are removed
@@ -1555,9 +1555,9 @@ export default function Home() {
               </button>
               <button
                 onClick={() => {
-                  console.log('🧹 Manual localStorage clear...');
-                  localStorage.clear();
-                  console.log('🧹 All localStorage cleared, reloading...');
+                  console.log('🧹 Using Zustand store clear...');
+                  clear(); // Use the Zustand store's clear function
+                  console.log('🧹 Store cleared, reloading...');
                   window.location.reload();
                 }}
                 className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"

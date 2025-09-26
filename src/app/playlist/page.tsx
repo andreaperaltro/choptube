@@ -32,6 +32,15 @@ export default function PlaylistPage() {
 
   const isHydrated = useHydration();
 
+  // Debug: Log hydration and video count
+  useEffect(() => {
+    console.log('🔍 Playlist Page Debug:', {
+      isHydrated,
+      videosCount: videos.length,
+      videos: videos.map(v => ({ id: v.id, title: v.title }))
+    });
+  }, [isHydrated, videos.length, videos]);
+
   // UI State
   const [newVideoUrl, setNewVideoUrl] = useState('');
   const [urlError, setUrlError] = useState<string>('');
@@ -283,20 +292,48 @@ export default function PlaylistPage() {
               Import/Export
             </button>
             <button
-              onClick={async () => {
-                const confirmed = await showDangerConfirm(
-                  `This will permanently delete all ${isHydrated ? videos.length : 0} videos and their pads from your playlist. This action cannot be undone.`,
-                  'Clear All Videos'
-                );
-                if (confirmed) {
-                  console.log('🧹 Manual localStorage clear...');
-                  localStorage.clear();
-                  console.log('🧹 All localStorage cleared, reloading...');
+              onClick={() => {
+                console.log('🔍 Debug localStorage:', {
+                  'choptube-playlist': localStorage.getItem('choptube-playlist'),
+                  'choptube-project': localStorage.getItem('choptube-project'),
+                  allKeys: Object.keys(localStorage)
+                });
+                console.log('🔍 Current store state:', {
+                  videosCount: videos.length,
+                  isHydrated,
+                  videos: videos
+                });
+              }}
+              className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+            >
+              Debug
+            </button>
+            <button
+              onClick={() => {
+                console.log('🧹 Clear All button clicked!');
+                console.log('🧹 Current state:', { isHydrated, videosCount: videos.length });
+                
+                // Simple confirmation
+                if (confirm(`This will permanently delete all ${videos.length} videos and their pads from your playlist. This action cannot be undone.`)) {
+                  console.log('🧹 User confirmed, clearing...');
+                  
+                  // Clear localStorage directly
+                  localStorage.removeItem('choptube-playlist');
+                  console.log('🧹 localStorage cleared');
+                  
+                  // Clear the store
+                  clear();
+                  console.log('🧹 Store cleared');
+                  
+                  // Reload the page
                   window.location.reload();
+                } else {
+                  console.log('🧹 User cancelled');
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
               disabled={!isHydrated || videos.length === 0}
+              title={`Debug: isHydrated=${isHydrated}, videos.length=${videos.length}, disabled=${!isHydrated || videos.length === 0}`}
             >
               Clear All
             </button>
