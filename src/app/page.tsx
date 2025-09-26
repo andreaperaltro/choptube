@@ -4,6 +4,11 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
+import { useProjectStore } from '@/store/project';
+import { clock } from '@/lib/clock/clock';
+import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate, applyPlaybackRateToAll, isPlayerReady, applyPlaybackRateWithRetry } from '@/lib/youtube/api';
+import BpmPanel from '@/features/bpm/BpmPanel';
+import PitchControl from '@/features/mixer/PitchControl';
 
 interface DrumPad {
   id: number;
@@ -14,6 +19,41 @@ interface DrumPad {
 }
 
 export default function Home() {
+  // Add global error handlers
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+      console.error('Global JavaScript error caught:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error
+      });
+      
+      // Prevent the error from propagating and causing UI crashes
+      if (event.message?.includes('Cannot read properties of null')) {
+        console.warn('Suppressing null reference error to prevent UI crash');
+        event.preventDefault();
+        return false;
+      }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('Unhandled promise rejection:', event.reason);
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  // Project store
+  const { bpm, tracks, setBpm, registerPlayer, setTrackReady, addTrack, updateTrack } = useProjectStore();
+  
   // Video 1 state
   const [videoId1, setVideoId1] = useState<string>('');
   const [videoUrl1, setVideoUrl1] = useState<string>('');
@@ -90,7 +130,7 @@ export default function Home() {
 
     const interval = setInterval(() => {
       try {
-        const time = player1.getCurrentTime();
+        const time = getCurrentTime(player1);
         setCurrentVideoTime1(time);
       } catch (error) {
         // Player might be destroyed or not ready
@@ -107,7 +147,7 @@ export default function Home() {
 
     const interval = setInterval(() => {
       try {
-        const time = player2.getCurrentTime();
+        const time = getCurrentTime(player2);
         setCurrentVideoTime2(time);
       } catch (error) {
         // Player might be destroyed or not ready
@@ -117,6 +157,23 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [player2, isPlayerReady2]);
+
+  // DISABLED: Global BPM-to-rate coupling removed
+  // All tracks now default to 1.0x unless changed per-track
+  // useEffect(() => {
+  //   const readyPlayers = tracks.filter(track => 
+  //     track.playerRef && 
+  //     track.ready && 
+  //     isPlayerReady(track.playerRef)
+  //   );
+  //   
+  //   if (readyPlayers.length > 0) {
+  //     console.log(`🌍 FORCE Re-applying quantized rate ${quantizedRate}x to ${readyPlayers.length} ready players`);
+  //     readyPlayers.forEach(track => {
+  //       applyPlaybackRate(track.playerRef, quantizedRate);
+  //     });
+  //   }
+  // }, [tracks, quantizedRate]);
 
   // Update button text based on URL content for video 1
   useEffect(() => {
@@ -228,6 +285,30 @@ export default function Home() {
     setError1(null);
     setShowSuccessMessage1(true);
     
+    // Add track to store if not exists
+    const existingTrack = tracks.find(t => t.id === 'video1');
+    if (!existingTrack) {
+      addTrack({
+        id: 'video1',
+        type: 'youtube',
+        label: 'Video 1',
+        volume: 1,
+        rate: 1.0,
+        ready: false,
+      });
+    }
+    
+    // Register player in project store
+    registerPlayer('video1', playerInstance);
+    setTrackReady('video1', true);
+    
+    // Apply saved rate if different from default
+    const trackWithRate = tracks.find(t => t.id === 'video1');
+    if (trackWithRate?.rate && trackWithRate.rate !== 1.0) {
+      console.log(`🎵 Restoring saved rate ${trackWithRate.rate}x for video1`);
+      applyPlaybackRate(playerInstance, trackWithRate.rate);
+    }
+    
     // Clear the loading timeout since video loaded successfully
     if (loadingTimeoutRef1.current) {
       clearTimeout(loadingTimeoutRef1.current);
@@ -238,7 +319,7 @@ export default function Home() {
     setTimeout(() => {
       setShowSuccessMessage1(false);
     }, 5000);
-  }, []);
+  }, [registerPlayer, setTrackReady, tracks, addTrack]);
 
   const handlePlayerReady2 = useCallback((playerInstance: YT.Player) => {
     console.log('Player 2 ready callback triggered');
@@ -247,6 +328,30 @@ export default function Home() {
     setIsLoading2(false);
     setError2(null);
     setShowSuccessMessage2(true);
+    
+    // Add track to store if not exists
+    const existingTrack = tracks.find(t => t.id === 'video2');
+    if (!existingTrack) {
+      addTrack({
+        id: 'video2',
+        type: 'youtube',
+        label: 'Video 2',
+        volume: 1,
+        rate: 1.0,
+        ready: false,
+      });
+    }
+    
+    // Register player in project store
+    registerPlayer('video2', playerInstance);
+    setTrackReady('video2', true);
+    
+    // Apply saved rate if different from default
+    const trackWithRate = tracks.find(t => t.id === 'video2');
+    if (trackWithRate?.rate && trackWithRate.rate !== 1.0) {
+      console.log(`🎵 Restoring saved rate ${trackWithRate.rate}x for video2`);
+      applyPlaybackRate(playerInstance, trackWithRate.rate);
+    }
     
     // Clear the loading timeout since video loaded successfully
     if (loadingTimeoutRef2.current) {
@@ -258,7 +363,7 @@ export default function Home() {
     setTimeout(() => {
       setShowSuccessMessage2(false);
     }, 5000);
-  }, []);
+  }, [registerPlayer, setTrackReady, tracks, addTrack]);
 
   const handlePadTrigger1 = useCallback((timestamp: number) => {
     if (player1 && isPlayerReady1) {
@@ -267,7 +372,7 @@ export default function Home() {
         
         // Stop the other video player (mixing functionality)
         if (player2 && isPlayerReady2) {
-          player2.pauseVideo();
+          pauseVideo(player2);
           // Reset all pads in video 2 to not playing
           setPads2(prev => prev.map(pad => ({
             ...pad,
@@ -290,9 +395,9 @@ export default function Home() {
           currentlyPlayingRef1.current = playingPadId;
         }
 
-        // Seek to timestamp and play
-        player1.seekTo(timestamp, true);
-        player1.playVideo();
+        // Seek to timestamp and play using new API helpers
+        seekSafe(player1, timestamp, true);
+        playVideo(player1);
         
       } catch (error) {
         console.error('Error triggering pad 1:', error);
@@ -309,7 +414,7 @@ export default function Home() {
         
         // Stop the other video player (mixing functionality)
         if (player1 && isPlayerReady1) {
-          player1.pauseVideo();
+          pauseVideo(player1);
           // Reset all pads in video 1 to not playing
           setPads1(prev => prev.map(pad => ({
             ...pad,
@@ -332,9 +437,9 @@ export default function Home() {
           currentlyPlayingRef2.current = playingPadId;
         }
 
-        // Seek to timestamp and play
-        player2.seekTo(timestamp, true);
-        player2.playVideo();
+        // Seek to timestamp and play using new API helpers
+        seekSafe(player2, timestamp, true);
+        playVideo(player2);
         
       } catch (error) {
         console.error('Error triggering pad 2:', error);
@@ -346,7 +451,7 @@ export default function Home() {
 
   const handlePadStop1 = useCallback(() => {
     if (player1 && isPlayerReady1) {
-      player1.pauseVideo();
+      pauseVideo(player1);
       
       // Update all pads to not playing
       setPads1(prev => prev.map(pad => ({ ...pad, isPlaying: false })));
@@ -356,7 +461,7 @@ export default function Home() {
 
   const handlePadStop2 = useCallback(() => {
     if (player2 && isPlayerReady2) {
-      player2.pauseVideo();
+      pauseVideo(player2);
       
       // Update all pads to not playing
       setPads2(prev => prev.map(pad => ({ ...pad, isPlaying: false })));
@@ -382,21 +487,21 @@ export default function Home() {
 
   const handleSetTimestampFromCurrentTime1 = useCallback((padId: number) => {
     if (player1 && isPlayerReady1) {
-      const currentTime = player1.getCurrentTime();
+      const currentTime = getCurrentTime(player1);
       handleUpdatePad1(padId, currentTime);
     }
   }, [player1, isPlayerReady1, handleUpdatePad1]);
 
   const handleSetTimestampFromCurrentTime2 = useCallback((padId: number) => {
     if (player2 && isPlayerReady2) {
-      const currentTime = player2.getCurrentTime();
+      const currentTime = getCurrentTime(player2);
       handleUpdatePad2(padId, currentTime);
     }
   }, [player2, isPlayerReady2, handleUpdatePad2]);
 
   const handleAutoQuantize1 = useCallback(() => {
     if (player1 && isPlayerReady1) {
-      const duration = player1.getDuration();
+      const duration = getDuration(player1);
       if (duration > 0) {
         const segmentDuration = duration / 16;
         
@@ -412,7 +517,7 @@ export default function Home() {
 
   const handleAutoQuantize2 = useCallback(() => {
     if (player2 && isPlayerReady2) {
-      const duration = player2.getDuration();
+      const duration = getDuration(player2);
       if (duration > 0) {
         const segmentDuration = duration / 16;
         
@@ -493,19 +598,31 @@ export default function Home() {
         
         // Check if video 1 is playing and pause it
         if (player1 && isPlayerReady1) {
-          const playerState1 = player1.getPlayerState();
-          if (playerState1 === YT.PlayerState.PLAYING) {
-            player1.pauseVideo();
-            handledSpacebar = true;
+          try {
+            if (player1 && typeof player1.getPlayerState === 'function') {
+              const playerState1 = player1.getPlayerState();
+              if (playerState1 === YT.PlayerState.PLAYING) {
+                pauseVideo(player1);
+                handledSpacebar = true;
+              }
+            }
+          } catch (error) {
+            console.warn('Error checking player1 state:', error);
           }
         }
         
         // Check if video 2 is playing and pause it
         if (player2 && isPlayerReady2) {
-          const playerState2 = player2.getPlayerState();
-          if (playerState2 === YT.PlayerState.PLAYING) {
-            player2.pauseVideo();
-            handledSpacebar = true;
+          try {
+            if (player2 && typeof player2.getPlayerState === 'function') {
+              const playerState2 = player2.getPlayerState();
+              if (playerState2 === YT.PlayerState.PLAYING) {
+                pauseVideo(player2);
+                handledSpacebar = true;
+              }
+            }
+          } catch (error) {
+            console.warn('Error checking player2 state:', error);
           }
         }
         
@@ -516,12 +633,12 @@ export default function Home() {
           const hasActivePad2 = pads2.some(pad => pad.isPlaying);
           
           if (hasActivePad1 && player1 && isPlayerReady1) {
-            player1.playVideo();
+            playVideo(player1);
           } else if (hasActivePad2 && player2 && isPlayerReady2) {
-            player2.playVideo();
+            playVideo(player2);
           } else if (player1 && isPlayerReady1) {
             // Default to player 1 if no active pads
-            player1.playVideo();
+            playVideo(player1);
           }
         }
       } else if (keyToPadMap1[key] !== undefined) {
@@ -562,7 +679,7 @@ export default function Home() {
       {/* Top Controls */}
       <div className="top-controls-bar px-4 py-3">
         <div className="w-full">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-4">
             {/* Logo */}
             <div className="flex items-center">
               <Image 
@@ -572,6 +689,11 @@ export default function Home() {
                 height={24}
                 className="h-6 w-auto"
               />
+            </div>
+            
+            {/* BPM Panel */}
+            <div className="flex-1 max-w-md">
+              <BpmPanel />
             </div>
             
             {/* Help Button */}
@@ -588,7 +710,7 @@ export default function Home() {
       </div>
 
       {/* Dual Column Layout */}
-      <div className="flex flex-row min-h-screen">
+      <div className="flex flex-row h-[calc(100vh-60px)]">
         {/* Video 1 Column */}
         <div className="flex-1 flex flex-col relative border-r border-white">
           {/* Video 1 Background - Full Column */}
@@ -607,7 +729,7 @@ export default function Home() {
           <div className="relative z-10 flex-1 flex flex-col px-4">
             {/* Video 1 Controls */}
             <div className="bg-black/80 backdrop-blur-sm px-8 py-6 border-b border-gray-600 relative z-10">
-              <div className="flex items-center gap-3 min-h-[44px]">
+              <div className="flex items-center gap-3 min-h-[44px] mb-4">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 1</h2>
                 
                 {/* Video 1 URL Input */}
@@ -667,7 +789,7 @@ export default function Home() {
 
             {/* Video 1 Content */}
             {isPlayerReady1 ? (
-              <div className="flex-1 flex items-center justify-center px-12 py-8">
+              <div className="flex-grow flex items-center justify-center px-12 py-4">
                 <div className="w-full max-w-2xl">
                   <DrumMachine
                     onPadTrigger={handlePadTrigger1}
@@ -682,7 +804,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center px-16 py-12">
+              <div className="flex-grow flex items-center justify-center px-16 py-8">
                 <div className="text-center max-w-md">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to ChopTube</h2>
                   <div className="space-y-3 text-gray-300">
@@ -712,6 +834,13 @@ export default function Home() {
               </div>
             )}
           </div>
+          
+          {/* Video 1 Pitch Control - Bottom of Column */}
+          {videoId1 && (
+            <div className="relative z-10 px-4 pb-2">
+              <PitchControl trackId="video1" />
+            </div>
+          )}
         </div>
 
         {/* Video 2 Column */}
@@ -792,7 +921,7 @@ export default function Home() {
 
             {/* Video 2 Content */}
             {isPlayerReady2 ? (
-              <div className="flex-1 flex items-center justify-center px-12 py-8">
+              <div className="flex-grow flex items-center justify-center px-12 py-4">
                 <div className="w-full max-w-2xl">
                   <DrumMachine
                     onPadTrigger={handlePadTrigger2}
@@ -808,7 +937,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center px-16 py-12">
+              <div className="flex-grow flex items-center justify-center px-16 py-8">
                 <div className="text-center max-w-md">
                   <h2 className="text-2xl font-bold text-white mb-4">Welcome to ChopTube</h2>
                   <div className="space-y-3 text-gray-300">
@@ -838,6 +967,13 @@ export default function Home() {
               </div>
             )}
           </div>
+          
+          {/* Video 2 Pitch Control - Bottom of Column */}
+          {videoId2 && (
+            <div className="relative z-10 px-4 pb-4">
+              <PitchControl trackId="video2" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -904,8 +1040,12 @@ export default function Home() {
                 <h4 className="text-lg font-semibold text-white mb-2">Controls</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-300">Play/Pause (Video 1):</span>
+                    <span className="text-gray-300">Play/Pause:</span>
                     <span className="text-white font-mono">Spacebar</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Tap Tempo:</span>
+                    <span className="text-white font-mono">T</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-300">Set timestamp:</span>

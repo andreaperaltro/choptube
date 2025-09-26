@@ -26,10 +26,16 @@ export default function VideoTimeline({
   useEffect(() => {
     if (player && isPlayerReady) {
       const updateTime = () => {
-        const time = player.getCurrentTime();
-        const videoDuration = player.getDuration();
-        setCurrentTime(time);
-        setDuration(videoDuration);
+        try {
+          if (player && typeof player.getCurrentTime === 'function' && typeof player.getDuration === 'function') {
+            const time = player.getCurrentTime();
+            const videoDuration = player.getDuration();
+            setCurrentTime(time);
+            setDuration(videoDuration);
+          }
+        } catch (error) {
+          console.warn('Error updating timeline time:', error);
+        }
       };
 
       intervalRef.current = setInterval(updateTime, 100);
@@ -47,8 +53,14 @@ export default function VideoTimeline({
   useEffect(() => {
     if (player && isPlayerReady) {
       const handleStateChange = () => {
-        const state = player.getPlayerState();
-        setIsPlaying(state === YT.PlayerState.PLAYING);
+        try {
+          if (player && typeof player.getPlayerState === 'function') {
+            const state = player.getPlayerState();
+            setIsPlaying(state === YT.PlayerState.PLAYING);
+          }
+        } catch (error) {
+          console.warn('Error getting player state:', error);
+        }
       };
 
       // Check state periodically
@@ -74,17 +86,27 @@ export default function VideoTimeline({
     const newTime = percentage * duration;
 
     // Seek to the clicked position
-    player.seekTo(newTime, true);
-    setCurrentTime(newTime);
+    try {
+      if (player && typeof player.seekTo === 'function') {
+        player.seekTo(newTime, true);
+        setCurrentTime(newTime);
+      }
+    } catch (error) {
+      console.warn('Error seeking video:', error);
+    }
   };
 
   const handlePlayPause = () => {
     if (!player || !isPlayerReady) return;
 
-    if (isPlaying) {
-      player.pauseVideo();
-    } else {
-      player.playVideo();
+    try {
+      if (isPlaying && typeof player.pauseVideo === 'function') {
+        player.pauseVideo();
+      } else if (!isPlaying && typeof player.playVideo === 'function') {
+        player.playVideo();
+      }
+    } catch (error) {
+      console.warn('Error controlling video playback:', error);
     }
   };
 

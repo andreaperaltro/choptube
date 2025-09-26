@@ -200,7 +200,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
         playerInstanceRef.current = null;
       }
     };
-  }, [isAPIReady, videoId, onPlayerReady, onPlayerStateChange, onError]);
+  }, [isAPIReady, videoId]); // Removed function dependencies to prevent infinite recreation
 
   return (
     <div className="w-full h-full youtube-player-container">
