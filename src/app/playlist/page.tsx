@@ -289,8 +289,7 @@ export default function PlaylistPage() {
                   'Clear All Videos'
                 );
                 if (confirmed) {
-                  console.log('🧹 Clearing playlist...', { before: videos.length });
-                  // Use the working method: direct localStorage clear + reload
+                  console.log('🧹 Manual localStorage clear...');
                   localStorage.clear();
                   console.log('🧹 All localStorage cleared, reloading...');
                   window.location.reload();

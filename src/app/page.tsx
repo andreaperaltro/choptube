@@ -1555,7 +1555,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => {
-                  // Use the working method: direct localStorage clear + reload
+                  console.log('🧹 Manual localStorage clear...');
                   localStorage.clear();
                   console.log('🧹 All localStorage cleared, reloading...');
                   window.location.reload();
