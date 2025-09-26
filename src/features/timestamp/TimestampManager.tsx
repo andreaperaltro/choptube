@@ -1,7 +1,7 @@
 'use client';
 
 import { useProjectStore } from '@/store/project';
-import { getCurrentTime, getDuration } from '@/lib/youtube/api';
+import { getCurrentTime, getDuration, getLoadedFraction } from '@/lib/youtube/api';
 
 /**
  * Timestamp Manager component
@@ -17,7 +17,7 @@ export default function TimestampManager() {
     return {
       currentTime: getCurrentTime(track.playerRef),
       duration: getDuration(track.playerRef),
-      loadedFraction: track.playerRef.getVideoLoadedFraction?.() || 0,
+      loadedFraction: getLoadedFraction(track.playerRef),
     };
   };
 
@@ -64,7 +64,7 @@ export default function TimestampManager() {
               </div>
               <div className="flex justify-between">
                 <span>Rate:</span>
-                <span>{track.playbackRate || 1}x</span>
+                <span>{track.rate || 1}x</span>
               </div>
             </div>
           </div>

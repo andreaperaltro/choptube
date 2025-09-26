@@ -3,17 +3,35 @@
  * Provides safe wrappers around YouTube player methods
  */
 
+// YouTube Player interface based on the YouTube IFrame API
+interface YouTubePlayer {
+  setPlaybackRate(rate: number): void;
+  getPlaybackRate(): number;
+  getCurrentTime(): number;
+  getDuration(): number;
+  seekTo(seconds: number, allowSeekAhead?: boolean): void;
+  playVideo(): void;
+  pauseVideo(): void;
+  getPlayerState(): number;
+  getVideoLoadedFraction(): number;
+  setVolume(volume: number): void;
+  getVolume(): number;
+  isMuted(): boolean;
+  mute(): void;
+  unMute(): void;
+}
+
 /**
  * Check if a YouTube player is ready and has all required methods
  * @param player - YouTube player instance
  * @returns true if player is ready, false otherwise
  */
-export function isPlayerReady(player: any): boolean {
+export function isPlayerReady(player: unknown): boolean {
   if (!player) return false;
   
   // Check for essential methods
   const requiredMethods = ['setPlaybackRate', 'getCurrentTime', 'getDuration'];
-  return requiredMethods.every(method => typeof player[method] === 'function');
+  return requiredMethods.every(method => typeof (player as Record<string, unknown>)[method] === 'function');
 }
 
 /**
@@ -24,7 +42,7 @@ export function isPlayerReady(player: any): boolean {
  * @returns true if successful, false if failed
  */
 export function applyPlaybackRate(
-  player: any, 
+  player: unknown, 
   rate: number, 
   onError?: (error: string) => void
 ): boolean {
@@ -39,7 +57,9 @@ export function applyPlaybackRate(
     return false;
   }
 
-  if (!player.setPlaybackRate || typeof player.setPlaybackRate !== 'function') {
+  const typedPlayer = player as YouTubePlayer;
+  
+  if (!typedPlayer.setPlaybackRate || typeof typedPlayer.setPlaybackRate !== 'function') {
     console.warn('Player does not have setPlaybackRate method - skipping rate application');
     return false;
   }
@@ -49,12 +69,12 @@ export function applyPlaybackRate(
     const clampedRate = Math.max(0.25, Math.min(2.0, rate));
     
     // Apply the rate
-    player.setPlaybackRate(clampedRate);
+    typedPlayer.setPlaybackRate(clampedRate);
     
     // Verify the rate was applied (some videos don't support certain rates)
     setTimeout(() => {
       try {
-        const actualRate = player.getPlaybackRate?.();
+        const actualRate = typedPlayer.getPlaybackRate?.();
         if (actualRate && Math.abs(actualRate - clampedRate) > 0.01) {
           const errorMsg = `Rate ${clampedRate}x not supported on this video`;
           console.warn(errorMsg);
@@ -62,7 +82,7 @@ export function applyPlaybackRate(
             onError(errorMsg);
           }
         }
-      } catch (verifyError) {
+      } catch {
         // Ignore verification errors
       }
     }, 100);
@@ -89,7 +109,7 @@ export function applyPlaybackRate(
  * @param players - Array of YouTube player instances
  * @param rates - Array of playback rates (must match players length)
  */
-export function applyPlaybackRateToAll(players: any[], rates: number[]): void {
+export function applyPlaybackRateToAll(players: unknown[], rates: number[]): void {
   if (!players || players.length === 0) {
     console.warn('No players provided to applyPlaybackRateToAll');
     return;
@@ -117,7 +137,7 @@ export function applyPlaybackRateToAll(players: any[], rates: number[]): void {
  * @param delay - Delay between retries in ms (default: 500)
  */
 export function applyPlaybackRateWithRetry(
-  player: any, 
+  player: unknown, 
   rate: number, 
   maxRetries: number = 3, 
   delay: number = 500
@@ -152,14 +172,20 @@ export function applyPlaybackRateWithRetry(
  * @param seconds - Time to seek to in seconds
  * @param allowSeekAhead - Whether to allow seeking ahead of loaded content
  */
-export function seekSafe(player: any, seconds: number, allowSeekAhead: boolean = true): void {
-  if (!player || typeof player.seekTo !== 'function') {
+export function seekSafe(player: unknown, seconds: number, allowSeekAhead: boolean = true): void {
+  if (!player) {
     console.warn('Player not ready or seekTo not available');
     return;
   }
 
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.seekTo !== 'function') {
+    console.warn('Player seekTo method not available');
+    return;
+  }
+
   try {
-    player.seekTo(seconds, allowSeekAhead);
+    typedPlayer.seekTo(seconds, allowSeekAhead);
   } catch (error) {
     console.error('Failed to seek to time:', error);
   }
@@ -170,13 +196,18 @@ export function seekSafe(player: any, seconds: number, allowSeekAhead: boolean =
  * @param player - YouTube player instance
  * @returns Loaded fraction (0-1) or 0 if not available
  */
-export function getLoadedFraction(player: any): number {
-  if (!player || typeof player.getVideoLoadedFraction !== 'function') {
+export function getLoadedFraction(player: unknown): number {
+  if (!player) {
+    return 0;
+  }
+
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.getVideoLoadedFraction !== 'function') {
     return 0;
   }
 
   try {
-    return player.getVideoLoadedFraction();
+    return typedPlayer.getVideoLoadedFraction();
   } catch (error) {
     console.error('Failed to get loaded fraction:', error);
     return 0;
@@ -188,13 +219,18 @@ export function getLoadedFraction(player: any): number {
  * @param player - YouTube player instance
  * @returns Current time in seconds or 0 if not available
  */
-export function getCurrentTime(player: any): number {
-  if (!player || typeof player.getCurrentTime !== 'function') {
+export function getCurrentTime(player: unknown): number {
+  if (!player) {
+    return 0;
+  }
+
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.getCurrentTime !== 'function') {
     return 0;
   }
 
   try {
-    return player.getCurrentTime();
+    return typedPlayer.getCurrentTime();
   } catch (error) {
     console.error('Failed to get current time:', error);
     return 0;
@@ -206,13 +242,18 @@ export function getCurrentTime(player: any): number {
  * @param player - YouTube player instance
  * @returns Duration in seconds or 0 if not available
  */
-export function getDuration(player: any): number {
-  if (!player || typeof player.getDuration !== 'function') {
+export function getDuration(player: unknown): number {
+  if (!player) {
+    return 0;
+  }
+
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.getDuration !== 'function') {
     return 0;
   }
 
   try {
-    return player.getDuration();
+    return typedPlayer.getDuration();
   } catch (error) {
     console.error('Failed to get duration:', error);
     return 0;
@@ -223,14 +264,20 @@ export function getDuration(player: any): number {
  * Play a YouTube player
  * @param player - YouTube player instance
  */
-export function playVideo(player: any): void {
-  if (!player || typeof player.playVideo !== 'function') {
+export function playVideo(player: unknown): void {
+  if (!player) {
     console.warn('Player not ready or playVideo not available');
     return;
   }
 
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.playVideo !== 'function') {
+    console.warn('Player playVideo method not available');
+    return;
+  }
+
   try {
-    player.playVideo();
+    typedPlayer.playVideo();
   } catch (error) {
     console.error('Failed to play video:', error);
   }
@@ -240,14 +287,20 @@ export function playVideo(player: any): void {
  * Pause a YouTube player
  * @param player - YouTube player instance
  */
-export function pauseVideo(player: any): void {
-  if (!player || typeof player.pauseVideo !== 'function') {
+export function pauseVideo(player: unknown): void {
+  if (!player) {
     console.warn('Player not ready or pauseVideo not available');
     return;
   }
 
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.pauseVideo !== 'function') {
+    console.warn('Player pauseVideo method not available');
+    return;
+  }
+
   try {
-    player.pauseVideo();
+    typedPlayer.pauseVideo();
   } catch (error) {
     console.error('Failed to pause video:', error);
   }
@@ -258,13 +311,18 @@ export function pauseVideo(player: any): void {
  * @param player - YouTube player instance
  * @returns Player state or -1 if not available
  */
-export function getPlayerState(player: any): number {
-  if (!player || typeof player.getPlayerState !== 'function') {
+export function getPlayerState(player: unknown): number {
+  if (!player) {
+    return -1;
+  }
+
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.getPlayerState !== 'function') {
     return -1;
   }
 
   try {
-    return player.getPlayerState();
+    return typedPlayer.getPlayerState();
   } catch (error) {
     console.error('Failed to get player state:', error);
     return -1;

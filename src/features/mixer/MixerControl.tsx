@@ -1,7 +1,7 @@
 'use client';
 
 import { useProjectStore } from '@/store/project';
-import { applyPlaybackRate } from '@/lib/youtube/api';
+// import { applyPlaybackRate } from '@/lib/youtube/api'; // Currently disabled
 
 /**
  * Mixer Control component
@@ -65,14 +65,14 @@ export default function MixerControl() {
             
             <div>
               <label className="block text-xs text-gray-300 mb-1">
-                Rate: {track.playbackRate || 1}x
+                Rate: {track.rate || 1}x
               </label>
               <input
                 type="range"
                 min="0.25"
                 max="2"
                 step="0.25"
-                value={track.playbackRate || 1}
+                value={track.rate || 1}
                 onChange={(e) => handleRateChange(track.id, Number(e.target.value))}
                 className="w-full"
               />

@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export interface Track {
   id: string;
   type: 'youtube';
-  playerRef?: any;
+  playerRef?: unknown;
   label?: string;
   volume?: number;
   offsetMs?: number;
@@ -28,7 +28,7 @@ interface ProjectState {
   setQuantizedRate: (rate: number) => void; // New: Action to set quantized rate
   setQuantizeToYouTubeRates: (enabled: boolean) => void; // New: Action to toggle quantization
   setSelectedTrackId: (trackId: string | null) => void; // New: Action to set selected track
-  registerPlayer: (trackId: string, player: any) => void;
+  registerPlayer: (trackId: string, player: unknown) => void;
   setTrackVolume: (trackId: string, volume: number) => void;
   setTrackRate: (trackId: string, rate: number) => void;
   setTrackReady: (trackId: string, ready: boolean) => void;
@@ -43,7 +43,7 @@ interface ProjectState {
  */
 export const useProjectStore = create<ProjectState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       bpm: 120,
       globalRate: 1,
       referenceBpm: 120,
@@ -76,7 +76,7 @@ export const useProjectStore = create<ProjectState>()(
         set({ selectedTrackId: trackId });
       },
 
-      registerPlayer: (trackId: string, player: any) => {
+      registerPlayer: (trackId: string, player: unknown) => {
         set((state) => ({
           tracks: state.tracks.map((track) =>
             track.id === trackId ? { ...track, playerRef: player } : track
@@ -136,7 +136,7 @@ export const useProjectStore = create<ProjectState>()(
         referenceBpm: state.referenceBpm,
         quantizedRate: state.quantizedRate, // Persist quantized rate
         quantizeToYouTubeRates: state.quantizeToYouTubeRates, // Persist quantization setting
-        tracks: state.tracks.map(({ playerRef, ...track }) => track), // Exclude playerRef from persistence
+        tracks: state.tracks.map(({ playerRef: _, ...track }) => track), // Exclude playerRef from persistence
       }),
     }
   )

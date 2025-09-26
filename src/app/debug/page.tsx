@@ -48,7 +48,7 @@ export default function DebugPage() {
         <div className="bg-gray-800 p-4 rounded">
           <h2 className="text-lg font-semibold mb-2">Instructions</h2>
           <p>1. Open browser console (F12)</p>
-          <p>2. Go back to main page: <a href="/" className="text-blue-400 underline">http://localhost:3000</a></p>
+          <p>2. Go back to main page: <button onClick={() => window.location.href = '/'} className="text-blue-400 underline cursor-pointer">http://localhost:3000</button></p>
           <p>3. Load videos and check console for errors</p>
           <p>4. Report any remaining errors</p>
         </div>

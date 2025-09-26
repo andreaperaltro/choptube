@@ -18,7 +18,7 @@ export default function PlaylistManager() {
         type: 'youtube' as const,
         label: newTrackLabel.trim(),
         volume: 1,
-        playbackRate: 1,
+        rate: 1,
         ready: false,
       };
       addTrack(newTrack);
@@ -71,7 +71,7 @@ export default function PlaylistManager() {
               <div className="text-xs text-gray-400 mt-1">
                 {track.ready ? 'Ready' : 'Not ready'} • 
                 Volume: {Math.round((track.volume || 1) * 100)}% • 
-                Rate: {track.playbackRate || 1}x
+                Rate: {track.rate || 1}x
               </div>
             </div>
             <button

@@ -46,7 +46,7 @@ export default function PitchControl({ trackId }: PitchControlProps) {
     if (track?.playerRef && track.ready && isPlayerReady(track.playerRef)) {
       console.log(`🎵 Setting track ${trackId} rate to ${quantizedRate}x`);
       
-      const success = applyPlaybackRate(track.playerRef, quantizedRate, (error) => {
+      const success = applyPlaybackRate(track.playerRef, quantizedRate, () => {
         // On error, revert to 1.0x and show toast
         console.warn(`Rate ${quantizedRate}x failed for ${trackId}, reverting to 1.0x`);
         setTrackRate(trackId, 1.0);

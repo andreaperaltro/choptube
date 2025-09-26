@@ -5,8 +5,7 @@ import Image from 'next/image';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
 import { useProjectStore } from '@/store/project';
-import { clock } from '@/lib/clock/clock';
-import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate, applyPlaybackRateToAll, isPlayerReady, applyPlaybackRateWithRetry } from '@/lib/youtube/api';
+import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate } from '@/lib/youtube/api';
 import BpmPanel from '@/features/bpm/BpmPanel';
 import PitchControl from '@/features/mixer/PitchControl';
 
@@ -52,7 +51,7 @@ export default function Home() {
   }, []);
 
   // Project store
-  const { bpm, tracks, setBpm, registerPlayer, setTrackReady, addTrack, updateTrack } = useProjectStore();
+  const { tracks, registerPlayer, setTrackReady, addTrack } = useProjectStore();
   
   // Video 1 state
   const [videoId1, setVideoId1] = useState<string>('');
