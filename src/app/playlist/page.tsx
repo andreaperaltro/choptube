@@ -289,10 +289,13 @@ export default function PlaylistPage() {
                 if (confirmed) {
                   console.log('🧹 Clearing playlist...', { before: videos.length });
                   clear();
-                  console.log('🧹 Playlist cleared, reloading page...');
-                  showSuccess('All videos cleared from playlist');
-                  // Force reload to ensure UI updates
-                  setTimeout(() => window.location.reload(), 1000);
+                  console.log('🧹 Playlist cleared, checking store state...');
+                  // Check if clear actually worked
+                  setTimeout(() => {
+                    console.log('🧹 After clear - videos count:', videos.length);
+                    showSuccess('All videos cleared from playlist');
+                    window.location.reload();
+                  }, 100);
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
@@ -427,11 +430,16 @@ export default function PlaylistPage() {
                           'Remove Video'
                         );
                         if (confirmed) {
+                          console.log('🗑️ Removing video:', video.id, 'Title:', video.title);
                           removeVideo(video.id);
                           if (selectedVideoId === video.id) {
                             setSelectedVideoId(null);
                           }
-                          showSuccess('Video removed from playlist');
+                          console.log('🗑️ Video removed, checking store state...');
+                          setTimeout(() => {
+                            console.log('🗑️ After remove - videos count:', videos.length);
+                            showSuccess('Video removed from playlist');
+                          }, 100);
                         }
                       }}
                       className="mt-2 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
