@@ -38,6 +38,7 @@ interface PlaylistState {
   reorderPads: (videoId: string, from: number, to: number) => void;
   clear: () => void;
   forceClear: () => void;
+  nuclearClear: () => void;
   
   // Utility actions
   getVideo: (videoId: string) => PlaylistVideo | undefined;
@@ -186,12 +187,49 @@ export const usePlaylistStore = create<PlaylistState>()(
       forceClear: () => {
         console.log('🧹 Force clear called');
         if (typeof window !== 'undefined') {
+          // Clear localStorage first
           localStorage.removeItem('choptube-playlist');
           console.log('🧹 localStorage force cleared');
+          
+          // Force store update immediately
+          set({ videos: [] });
+          console.log('🧹 Store force updated to empty array');
+          
+          // Wait a bit then reload
+          setTimeout(() => {
+            console.log('🧹 Reloading page...');
+            window.location.reload();
+          }, 100);
+        }
+      },
+
+      /**
+       * Nuclear clear - removes ALL ChopTube data
+       */
+      nuclearClear: () => {
+        console.log('🧹 Nuclear clear called');
+        if (typeof window !== 'undefined') {
+          // Clear all localStorage keys
+          const keysToRemove = [
+            'choptube-playlist',
+            'choptube-project', 
+            'choptube.dev'
+          ];
+          
+          keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            console.log(`🧹 Removed ${key} from localStorage`);
+          });
+          
           // Force store update
           set({ videos: [] });
-          // Reload page to ensure clean state
-          window.location.reload();
+          console.log('🧹 Store nuclear updated to empty array');
+          
+          // Reload page
+          setTimeout(() => {
+            console.log('🧹 Nuclear clear complete, reloading...');
+            window.location.reload();
+          }, 100);
         }
       },
 

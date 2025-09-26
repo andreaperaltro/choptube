@@ -25,6 +25,7 @@ export default function PlaylistPage() {
     // reorderPads, // TODO: Implement drag and drop functionality
     clear,
     forceClear,
+    nuclearClear,
     getVideoCount,
     getTotalPadsCount
   } = usePlaylistStore();
@@ -317,17 +318,28 @@ export default function PlaylistPage() {
             <button
               onClick={async () => {
                 const confirmed = await showDangerConfirm(
-                  `FORCE CLEAR: This will bypass the store and directly clear localStorage, then reload the page. This is a nuclear option.`,
-                  'Force Clear All Data'
+                  `NUCLEAR CLEAR: This will remove ALL ChopTube data from localStorage and force reload. This is the ultimate nuclear option.`,
+                  'Nuclear Clear All Data'
                 );
                 if (confirmed) {
-                  console.log('🧹 Force clearing all data...');
-                  forceClear();
+                  console.log('🧹 Nuclear clearing all data...');
+                  nuclearClear();
                 }
               }}
-              className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
             >
-              Force Clear
+              Nuclear Clear
+            </button>
+            <button
+              onClick={() => {
+                console.log('🧹 Manual localStorage clear...');
+                localStorage.clear();
+                console.log('🧹 All localStorage cleared, reloading...');
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
+            >
+              Clear All Storage
             </button>
           </div>
         </div>
