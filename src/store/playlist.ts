@@ -171,6 +171,10 @@ export const usePlaylistStore = create<PlaylistState>()(
        */
       clear: () => {
         set({ videos: [] });
+        // Force clear localStorage as well to ensure it's completely cleared
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('choptube-playlist');
+        }
       },
 
       /**

@@ -7,6 +7,7 @@ import { parseYouTubeId } from '@/lib/yt/url';
 import { normalizeUrl, isYouTubeUrl } from '@/lib/utils/url';
 import { showSuccess, showError, showWarning, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import { showDangerConfirm, showWarningConfirm } from '@/lib/utils/confirm';
+import { debugPlaylistData } from '@/lib/utils/debug';
 import Link from 'next/link';
 
 /**
@@ -286,14 +287,28 @@ export default function PlaylistPage() {
                   'Clear All Videos'
                 );
                 if (confirmed) {
+                  console.log('🧹 Clearing playlist...', { before: videos.length });
                   clear();
+                  console.log('🧹 Playlist cleared, reloading page...');
                   showSuccess('All videos cleared from playlist');
+                  // Force reload to ensure UI updates
+                  setTimeout(() => window.location.reload(), 1000);
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
               disabled={!isHydrated || videos.length === 0}
             >
               Clear All
+            </button>
+            <button
+              onClick={() => {
+                debugPlaylistData();
+                console.log('Current videos in store:', videos);
+                console.log('Hydration status:', isHydrated);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              Debug
             </button>
           </div>
         </div>

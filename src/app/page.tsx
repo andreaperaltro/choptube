@@ -24,6 +24,7 @@ import { playlistPreloader } from '@/lib/playlist/PlaylistPreloader';
 import { PRELOAD_CONFIG } from '@/lib/config';
 import { useDevUI } from '@/lib/DevUIContext';
 import { showSuccess, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
+import { clearAllChopTubeData, debugPlaylistData, clearPlaylistData } from '@/lib/utils/debug';
 import Link from 'next/link';
 
 interface DrumPad {
@@ -1530,6 +1531,46 @@ export default function Home() {
             >
               ✕
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Debug Panel - Dev Mode Only */}
+      {isDevUI && (
+        <div className="fixed bottom-4 left-4 bg-gray-900 border border-gray-600 rounded-lg p-4 max-w-sm z-40">
+          <h3 className="text-sm font-semibold text-white mb-2">🐛 Debug Panel</h3>
+          <div className="space-y-2">
+            <div className="text-xs text-gray-300">
+              Playlist: {playlistVideos.length} videos
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  debugPlaylistData();
+                  console.log('Current playlist videos:', playlistVideos);
+                }}
+                className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+              >
+                Debug Data
+              </button>
+              <button
+                onClick={() => {
+                  clearPlaylistData();
+                }}
+                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+              >
+                Clear Playlist
+              </button>
+              <button
+                onClick={() => {
+                  clearAllChopTubeData();
+                  window.location.reload();
+                }}
+                className="px-2 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
+              >
+                Clear All
+              </button>
+            </div>
           </div>
         </div>
       )}
