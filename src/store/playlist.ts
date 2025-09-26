@@ -87,9 +87,12 @@ export const usePlaylistStore = create<PlaylistState>()(
        * Remove a video from the playlist
        */
       removeVideo: (videoId: string) => {
-        set((state) => ({
-          videos: state.videos.filter(v => v.id !== videoId),
-        }));
+        console.log('🗑️ Removing video:', videoId);
+        set((state) => {
+          const newVideos = state.videos.filter(v => v.id !== videoId);
+          console.log('🗑️ Videos after removal:', newVideos.length);
+          return { videos: newVideos };
+        });
       },
 
       /**
@@ -173,12 +176,14 @@ export const usePlaylistStore = create<PlaylistState>()(
        */
       clear: () => {
         console.log('🧹 Store clear called, current videos:', get().videos.length);
-        set({ videos: [] });
-        // Force clear localStorage as well to ensure it's completely cleared
+        // Clear localStorage first
         if (typeof window !== 'undefined') {
           localStorage.removeItem('choptube-playlist');
           console.log('🧹 localStorage cleared');
         }
+        // Then update store
+        set({ videos: [] });
+        console.log('🧹 Store updated to empty array');
       },
 
       /**
