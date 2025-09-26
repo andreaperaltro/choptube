@@ -4,11 +4,12 @@ import { useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/store/project';
 import { applyPlaybackRate, isPlayerReady } from '@/lib/youtube/api';
 import { showToast } from '@/lib/utils/toast';
+import { YOUTUBE_CONFIG } from '@/lib/config';
 
 /**
- * YouTube allowed playback rates
+ * YouTube allowed playback rates (from config)
  */
-const ALLOWED_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+const ALLOWED_RATES = YOUTUBE_CONFIG.ALLOWED_RATES;
 
 /**
  * Quantize a raw rate to the nearest allowed YouTube rate
@@ -21,12 +22,13 @@ function quantizeToAllowedRate(rawRate: number): number {
 
 interface PitchControlProps {
   trackId: string;
+  isDevUI?: boolean;
 }
 
 /**
  * Per-track pitch/speed control component
  */
-export default function PitchControl({ trackId }: PitchControlProps) {
+export default function PitchControl({ trackId, isDevUI = false }: PitchControlProps) {
   const { tracks, setTrackRate, selectedTrackId, setSelectedTrackId } = useProjectStore();
   
   const track = tracks.find(t => t.id === trackId);
@@ -44,11 +46,17 @@ export default function PitchControl({ trackId }: PitchControlProps) {
     
     // Apply to player if ready
     if (track?.playerRef && track.ready && isPlayerReady(track.playerRef)) {
-      console.log(`🎵 Setting track ${trackId} rate to ${quantizedRate}x`);
+      // Only log in dev mode
+      if (typeof window !== 'undefined' && window.location.search.includes('dev=1')) {
+        console.log(`🎵 Setting track ${trackId} rate to ${quantizedRate}x`);
+      }
       
       const success = applyPlaybackRate(track.playerRef, quantizedRate, () => {
         // On error, revert to 1.0x and show toast
-        console.warn(`Rate ${quantizedRate}x failed for ${trackId}, reverting to 1.0x`);
+        // Only log in dev mode
+        if (typeof window !== 'undefined' && window.location.search.includes('dev=1')) {
+          console.warn(`Rate ${quantizedRate}x failed for ${trackId}, reverting to 1.0x`);
+        }
         setTrackRate(trackId, 1.0);
         showToast('Rate not supported on this video', { type: 'warning', duration: 2500 });
         
@@ -112,6 +120,21 @@ export default function PitchControl({ trackId }: PitchControlProps) {
     return null;
   }
 
+  // Production mode: show only rate label
+  if (!isDevUI) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-2">
+        <div className="flex items-center justify-between">
+          <h4 className="text-xs font-semibold text-white">Rate</h4>
+          <span className="text-xs text-green-400 font-mono bg-green-900 px-2 py-0.5 rounded">
+            {displayRate.toFixed(2)}×
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Dev mode: show full interactive control
   return (
     <div 
       className={`bg-gray-800 rounded-lg p-2 cursor-pointer transition-all duration-200 ${

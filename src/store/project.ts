@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { BPM_CONFIG, PRELOAD_CONFIG, YOUTUBE_CONFIG } from '@/lib/config';
 
 export interface Track {
   id: string;
@@ -21,6 +22,10 @@ interface ProjectState {
   selectedTrackId: string | null; // Currently selected/focused track for shortcuts
   leftVideoId: string | null; // Selected playlist video for left column
   rightVideoId: string | null; // Selected playlist video for right column
+  lookaheadMs: number; // New: Lookahead time for transport (default 120ms)
+  isTransportRunning: boolean; // New: Transport state
+  preloadPlaylistCandidates: boolean; // New: Whether to preload playlist videos
+  maxPlaylistPreloads: number; // New: Maximum number of playlist videos to preload
   tracks: Track[];
   
   // Actions
@@ -36,6 +41,11 @@ interface ProjectState {
   setTrackVolume: (trackId: string, volume: number) => void;
   setTrackRate: (trackId: string, rate: number) => void;
   setTrackReady: (trackId: string, ready: boolean) => void;
+  setAllReady: (ready: boolean) => void; // New: Set all tracks ready state
+  setLookaheadMs: (ms: number) => void; // New: Set lookahead time
+  setTransportRunning: (running: boolean) => void; // New: Set transport state
+  setPreloadPlaylistCandidates: (enabled: boolean) => void; // New: Toggle playlist preloading
+  setMaxPlaylistPreloads: (count: number) => void; // New: Set max playlist preloads
   addTrack: (track: Track) => void;
   removeTrack: (trackId: string) => void;
   updateTrack: (trackId: string, updates: Partial<Track>) => void;
@@ -48,14 +58,18 @@ interface ProjectState {
 export const useProjectStore = create<ProjectState>()(
   persist(
     (set) => ({
-      bpm: 120,
-      globalRate: 1,
-      referenceBpm: 120,
-      quantizedRate: 1, // Default to 1x (no rate change)
-      quantizeToYouTubeRates: true, // Default to enabled
+      bpm: BPM_CONFIG.DEFAULT_BPM,
+      globalRate: YOUTUBE_CONFIG.DEFAULT_RATE,
+      referenceBpm: BPM_CONFIG.DEFAULT_REFERENCE_BPM,
+      quantizedRate: YOUTUBE_CONFIG.DEFAULT_RATE, // Default to 1x (no rate change)
+      quantizeToYouTubeRates: BPM_CONFIG.DEFAULT_QUANTIZE_TO_YOUTUBE_RATES, // Default to enabled
       selectedTrackId: null, // No track selected by default
       leftVideoId: null, // No left video selected by default
       rightVideoId: null, // No right video selected by default
+      lookaheadMs: PRELOAD_CONFIG.LOOKAHEAD_MS, // Default lookahead time
+      isTransportRunning: false, // Transport not running by default
+      preloadPlaylistCandidates: false, // Disabled by default
+      maxPlaylistPreloads: PRELOAD_CONFIG.MAX_HIDDEN_PRELOADED_PLAYERS, // Default max playlist preloads
       tracks: [],
 
       setBpm: (bpm: number) => {
@@ -109,7 +123,7 @@ export const useProjectStore = create<ProjectState>()(
       setTrackRate: (trackId: string, rate: number) => {
         set((state) => ({
           tracks: state.tracks.map((track) =>
-            track.id === trackId ? { ...track, playbackRate: rate } : track
+            track.id === trackId ? { ...track, rate } : track
           ),
         }));
       },
@@ -120,6 +134,28 @@ export const useProjectStore = create<ProjectState>()(
             track.id === trackId ? { ...track, ready } : track
           ),
         }));
+      },
+
+      setAllReady: (ready: boolean) => {
+        set((state) => ({
+          tracks: state.tracks.map((track) => ({ ...track, ready })),
+        }));
+      },
+
+      setLookaheadMs: (ms: number) => {
+        set({ lookaheadMs: Math.max(0, Math.min(1000, ms)) }); // Clamp between 0-1000ms
+      },
+
+      setTransportRunning: (running: boolean) => {
+        set({ isTransportRunning: running });
+      },
+
+      setPreloadPlaylistCandidates: (enabled: boolean) => {
+        set({ preloadPlaylistCandidates: enabled });
+      },
+
+      setMaxPlaylistPreloads: (count: number) => {
+        set({ maxPlaylistPreloads: Math.max(0, Math.min(10, count)) }); // Clamp between 0-10
       },
 
       addTrack: (track: Track) => {
@@ -153,8 +189,18 @@ export const useProjectStore = create<ProjectState>()(
         selectedTrackId: state.selectedTrackId, // Persist selected track ID
         leftVideoId: state.leftVideoId, // Persist left video selection
         rightVideoId: state.rightVideoId, // Persist right video selection
+        lookaheadMs: state.lookaheadMs, // Persist lookahead setting
+        preloadPlaylistCandidates: state.preloadPlaylistCandidates, // Persist playlist preload setting
+        maxPlaylistPreloads: state.maxPlaylistPreloads, // Persist max playlist preloads
         tracks: state.tracks.map(({ playerRef: _, ...track }) => track), // Exclude playerRef from persistence
       }),
     }
   )
+);
+
+/**
+ * Selector to check if all tracks are ready
+ */
+export const useAllReady = () => useProjectStore((state) => 
+  state.tracks.length > 0 && state.tracks.every(track => track.ready === true)
 );

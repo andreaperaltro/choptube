@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { DevUIProvider } from '@/lib/DevUIContext'
 
 export const metadata: Metadata = {
   title: 'ChopTube - YouTube Drum Machine',
@@ -23,7 +24,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ErrorBoundary>
-          {children}
+          <DevUIProvider>
+            {children}
+          </DevUIProvider>
         </ErrorBoundary>
       </body>
     </html>

@@ -54,7 +54,10 @@ export default function BpmPanel() {
           // Only update if BPM is reasonable - VISUAL ONLY
           if (calculatedBpm >= 20 && calculatedBpm <= 300) {
             handleBpmChange(calculatedBpm);
-            console.log(`🎵 Tap Tempo detected: ${calculatedBpm} BPM (visual only)`);
+            // Only log in dev mode
+            if (typeof window !== 'undefined' && window.location.search.includes('dev=1')) {
+              console.log(`🎵 Tap Tempo detected: ${calculatedBpm} BPM (visual only)`);
+            }
           }
         }
       }

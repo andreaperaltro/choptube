@@ -4,12 +4,25 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
-import { useProjectStore } from '@/store/project';
+import { useProjectStore, useAllReady } from '@/store/project';
 import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate } from '@/lib/youtube/api';
+import { transportManager } from '@/lib/transport/TransportManager';
 import BpmPanel from '@/features/bpm/BpmPanel';
 import PitchControl from '@/features/mixer/PitchControl';
 import PlaylistDropdown from '@/components/PlaylistDropdown';
+import TrackStatus from '@/components/TrackStatus';
+import TransportControl from '@/components/TransportControl';
+import PlaylistPreloadControl from '@/components/PlaylistPreloadControl';
+import DevDiagnosticsPanel from '@/components/DevDiagnosticsPanel';
 import { usePlaylistStore } from '@/store/playlist';
+import { playlistPreloadManager } from '@/lib/playlist/PlaylistPreloadManager';
+import { useDiagnosticsStore } from '@/store/diagnostics';
+import { ensureGestureArmed } from '@/lib/gestureLatch';
+import { autoPreloadPlayer } from '@/lib/youtube/autoPreload';
+import { policyGuard } from '@/lib/PolicyGuard';
+import { playlistPreloader } from '@/lib/playlist/PlaylistPreloader';
+import { PRELOAD_CONFIG } from '@/lib/config';
+import { useDevUI } from '@/lib/DevUIContext';
 import { showSuccess, showError, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import Link from 'next/link';
 
@@ -63,12 +76,62 @@ export default function Home() {
     leftVideoId,
     rightVideoId,
     setLeftVideoId,
-    setRightVideoId
+    setRightVideoId,
+    lookaheadMs,
+    isTransportRunning
   } = useProjectStore();
   
-  // Playlist store
-  const { getVideo } = usePlaylistStore();
+  // Dev UI context
+  const { isDevUI } = useDevUI();
   
+  // All ready state monitoring
+  const allReady = useAllReady();
+  
+  // Monitor allReady state changes for global toasts
+  useEffect(() => {
+    if (tracks.length > 0 && allReady) {
+      showSuccess('All tracks ready for playback!');
+    }
+  }, [allReady, tracks.length]);
+
+  // Cleanup transport manager on unmount
+  useEffect(() => {
+    return () => {
+      transportManager.cancelAllScheduledPlays();
+    };
+  }, []);
+
+  // Handle document visibility changes for preload state persistence
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !allReady && tracks.length > 0) {
+        // Show subtle reminder when tab becomes visible and not all tracks are ready
+        console.log('📱 Tab became visible - consider retrying preload if needed');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [allReady, tracks.length]);
+
+  // Playlist store
+  const { getVideo, getAllVideos } = usePlaylistStore();
+  const playlistVideos = getAllVideos();
+
+  // Clean up preloaded players when playlist videos are removed
+  useEffect(() => {
+    const currentVideoIds = playlistVideos.map(v => v.id);
+    
+    // Get currently preloaded video IDs
+    const stats = playlistPreloadManager.getStats();
+    
+    // Clean up any preloaded players for videos that no longer exist in playlist
+    // This is a simple approach - in a more sophisticated implementation,
+    // we'd track which videos are preloaded and compare with current playlist
+    console.log(`🧹 Playlist changed: ${currentVideoIds.length} videos, ${stats.total} preloaded`);
+    
+  }, [playlistVideos]); // Re-run when playlist videos change
+
   // Video 1 state
   const [videoId1, setVideoId1] = useState<string>('');
   const [videoUrl1, setVideoUrl1] = useState<string>('');
@@ -95,6 +158,21 @@ export default function Home() {
   const [isPlayerReady2, setIsPlayerReady2] = useState(false);
   const [isLoading2, setIsLoading2] = useState(false);
   const [error2, setError2] = useState<string | null>(null);
+
+  // Auto-preload playlist candidates when playlist changes
+  useEffect(() => {
+    if (playlistVideos.length > 0) {
+      const excludeVideoIds = [videoId1, videoId2].filter(Boolean);
+      playlistPreloader.preloadCandidates(playlistVideos, excludeVideoIds).then(result => {
+        if (result.success.length > 0) {
+          console.debug(`PlaylistPreloader: Preloaded ${result.success.length} candidates`);
+        }
+      });
+    } else {
+      // Clear candidates when playlist is empty
+      playlistPreloader.clearAll();
+    }
+  }, [playlistVideos, videoId1, videoId2]);
   const [currentVideoTime2, setCurrentVideoTime2] = useState(0);
   const [showSuccessMessage2, setShowSuccessMessage2] = useState(false);
   const [pads2, setPads2] = useState<DrumPad[]>(() =>
@@ -248,6 +326,22 @@ export default function Home() {
         setVideoId1(videoId);
         setError1('');
         
+        // Check if this video is preloaded for fast swapping
+        if (playlistPreloader.isPreloaded(videoId)) {
+          console.log(`🚀 Fast swapping to preloaded video: ${videoId}`);
+          showSuccess(`Instant load: ${playlistVideo.title || videoId}`);
+          
+          // Try to swap the preloaded player
+          const videoContainer = document.querySelector('#video1-container');
+          if (videoContainer && playlistPreloader.swapToVisible(videoId, videoContainer as HTMLElement)) {
+            console.log(`✅ Swapped preloaded player for ${videoId}`);
+          } else {
+            console.log(`⚠️ Failed to swap preloaded player for ${videoId}, falling back to normal load`);
+          }
+        } else {
+          console.log(`📥 Loading video normally: ${videoId}`);
+        }
+        
         // Import timestamps to drum pads
         if (playlistVideo.pads && playlistVideo.pads.length > 0) {
           const newPads = playlistVideo.pads.slice(0, 16).map((pad, index) => ({
@@ -287,6 +381,22 @@ export default function Home() {
         setVideoUrl2(playlistVideo.url);
         setVideoId2(videoId);
         setError2('');
+        
+        // Check if this video is preloaded for fast swapping
+        if (playlistPreloader.isPreloaded(videoId)) {
+          console.log(`🚀 Fast swapping to preloaded video: ${videoId}`);
+          showSuccess(`Instant load: ${playlistVideo.title || videoId}`);
+          
+          // Try to swap the preloaded player
+          const videoContainer = document.querySelector('#video2-container');
+          if (videoContainer && playlistPreloader.swapToVisible(videoId, videoContainer as HTMLElement)) {
+            console.log(`✅ Swapped preloaded player for ${videoId}`);
+          } else {
+            console.log(`⚠️ Failed to swap preloaded player for ${videoId}, falling back to normal load`);
+          }
+        } else {
+          console.log(`📥 Loading video normally: ${videoId}`);
+        }
         
         // Import timestamps to drum pads
         if (playlistVideo.pads && playlistVideo.pads.length > 0) {
@@ -342,9 +452,13 @@ export default function Home() {
 
   const handleUrlSubmit1 = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Ensure gesture is armed for autoplay compliance
+    ensureGestureArmed();
+    
     const id = extractVideoId(videoUrl1);
     if (id) {
-      console.log('Loading video 1 with ID:', id);
+      if (isDevUI) console.log('Loading video 1 with ID:', id);
       setError1(null);
       setIsLoading1(true);
       
@@ -370,9 +484,13 @@ export default function Home() {
 
   const handleUrlSubmit2 = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Ensure gesture is armed for autoplay compliance
+    ensureGestureArmed();
+    
     const id = extractVideoId(videoUrl2);
     if (id) {
-      console.log('Loading video 2 with ID:', id);
+      if (isDevUI) console.log('Loading video 2 with ID:', id);
       setError2(null);
       setIsLoading2(true);
       
@@ -397,7 +515,7 @@ export default function Home() {
   };
 
   const handlePlayerReady1 = useCallback((playerInstance: YT.Player) => {
-    console.log('Player 1 ready callback triggered');
+        if (isDevUI) console.log('Player 1 ready callback triggered');
     setPlayer1(playerInstance);
     setIsPlayerReady1(true);
     setIsLoading1(false);
@@ -435,6 +553,23 @@ export default function Home() {
       loadingTimeoutRef1.current = null;
     }
     
+    // Auto-preload the player
+    const firstCue = Math.min(...pads1.filter(pad => pad.timestamp >= 0).map(pad => pad.timestamp));
+    autoPreloadPlayer(playerInstance, 'video1', firstCue).then(isReady => {
+      if (isReady) {
+        console.log('✅ Auto-preload completed for video1');
+        setTrackReady('video1', true);
+      } else {
+        console.log('⚠️ Auto-preload partial for video1');
+        setTrackReady('video1', false);
+        
+        // Check if track is pending retry
+        if (policyGuard.isTrackPending('video1')) {
+          console.debug('PolicyGuard: video1 registered for silent retry on next user interaction');
+        }
+      }
+    });
+    
     // Auto-dismiss success message after 5 seconds
     setTimeout(() => {
       setShowSuccessMessage1(false);
@@ -442,7 +577,7 @@ export default function Home() {
   }, [registerPlayer, setTrackReady, tracks, addTrack]);
 
   const handlePlayerReady2 = useCallback((playerInstance: YT.Player) => {
-    console.log('Player 2 ready callback triggered');
+        if (isDevUI) console.log('Player 2 ready callback triggered');
     setPlayer2(playerInstance);
     setIsPlayerReady2(true);
     setIsLoading2(false);
@@ -480,6 +615,23 @@ export default function Home() {
       loadingTimeoutRef2.current = null;
     }
     
+    // Auto-preload the player
+    const firstCue = Math.min(...pads2.filter(pad => pad.timestamp >= 0).map(pad => pad.timestamp));
+    autoPreloadPlayer(playerInstance, 'video2', firstCue).then(isReady => {
+      if (isReady) {
+        console.log('✅ Auto-preload completed for video2');
+        setTrackReady('video2', true);
+      } else {
+        console.log('⚠️ Auto-preload partial for video2');
+        setTrackReady('video2', false);
+        
+        // Check if track is pending retry
+        if (policyGuard.isTrackPending('video2')) {
+          console.debug('PolicyGuard: video2 registered for silent retry on next user interaction');
+        }
+      }
+    });
+    
     // Auto-dismiss success message after 5 seconds
     setTimeout(() => {
       setShowSuccessMessage2(false);
@@ -489,7 +641,11 @@ export default function Home() {
   const handlePadTrigger1 = useCallback((timestamp: number) => {
     if (player1 && isPlayerReady1) {
       try {
-        console.log('Triggering pad 1 at timestamp:', timestamp);
+        if (isDevUI) console.log('Triggering pad 1 at timestamp:', timestamp);
+        
+        // Record play latency start time for diagnostics (dev only)
+        const playStartTime = Date.now();
+        const diagnostics = isDevUI ? useDiagnosticsStore.getState() : null;
         
         // Stop the other video player (mixing functionality)
         if (player2 && isPlayerReady2) {
@@ -516,9 +672,55 @@ export default function Home() {
           currentlyPlayingRef1.current = playingPadId;
         }
 
-        // Seek to timestamp and play using new API helpers
-        seekSafe(player1, timestamp, true);
-        playVideo(player1);
+        // Apply playback rate before seeking
+        const track = tracks.find(t => t.id === 'video1');
+        if (track?.rate && track.rate !== 1.0) {
+          applyPlaybackRate(player1, track.rate);
+        }
+
+        // Use transport manager for lookahead seeking if transport is running
+        if (isTransportRunning) {
+          transportManager.schedulePlay(
+            'video1',
+            player1,
+            timestamp,
+            PRELOAD_CONFIG.LOOKAHEAD_MS, // Use config constant
+            () => {
+              if (isDevUI) console.log('🎵 Pad 1 scheduled play completed');
+              // Record play latency for diagnostics (dev only)
+              if (diagnostics?.isEnabled) {
+                const latency = Date.now() - playStartTime;
+                diagnostics.recordPlayLatency('video1', latency);
+              }
+            }
+          );
+        } else {
+          // Lookahead scheduling for non-transport case
+          const now = Date.now();
+          const targetTime = now + PRELOAD_CONFIG.LOOKAHEAD_MS;
+          
+          // Schedule seek with lookahead
+          const scheduleSeek = () => {
+            seekSafe(player1, timestamp, true);
+            playVideo(player1);
+            
+            // Record play latency for diagnostics (dev only)
+            if (diagnostics?.isEnabled) {
+              const latency = Date.now() - playStartTime;
+              diagnostics.recordPlayLatency('video1', latency);
+            }
+          };
+          
+          if (PRELOAD_CONFIG.LOOKAHEAD_MS > 0) {
+            // Schedule with lookahead
+            const delay = Math.max(0, targetTime - now);
+            setTimeout(scheduleSeek, delay);
+            if (isDevUI) console.log(`🎵 Pad 1 scheduled with ${delay}ms lookahead`);
+          } else {
+            // Immediate execution
+            scheduleSeek();
+          }
+        }
         
       } catch (error) {
         console.error('Error triggering pad 1:', error);
@@ -526,12 +728,16 @@ export default function Home() {
     } else {
       console.warn('Player 1 not ready or not available');
     }
-  }, [player1, isPlayerReady1, pads1, player2, isPlayerReady2]);
+  }, [player1, isPlayerReady1, pads1, player2, isPlayerReady2, isTransportRunning, tracks]);
 
   const handlePadTrigger2 = useCallback((timestamp: number) => {
     if (player2 && isPlayerReady2) {
       try {
-        console.log('Triggering pad 2 at timestamp:', timestamp);
+        if (isDevUI) console.log('Triggering pad 2 at timestamp:', timestamp);
+        
+        // Record play latency start time for diagnostics (dev only)
+        const playStartTime = Date.now();
+        const diagnostics = isDevUI ? useDiagnosticsStore.getState() : null;
         
         // Stop the other video player (mixing functionality)
         if (player1 && isPlayerReady1) {
@@ -558,9 +764,55 @@ export default function Home() {
           currentlyPlayingRef2.current = playingPadId;
         }
 
-        // Seek to timestamp and play using new API helpers
-        seekSafe(player2, timestamp, true);
-        playVideo(player2);
+        // Apply playback rate before seeking
+        const track = tracks.find(t => t.id === 'video2');
+        if (track?.rate && track.rate !== 1.0) {
+          applyPlaybackRate(player2, track.rate);
+        }
+
+        // Use transport manager for lookahead seeking if transport is running
+        if (isTransportRunning) {
+          transportManager.schedulePlay(
+            'video2',
+            player2,
+            timestamp,
+            PRELOAD_CONFIG.LOOKAHEAD_MS, // Use config constant
+            () => {
+              if (isDevUI) console.log('🎵 Pad 2 scheduled play completed');
+              // Record play latency for diagnostics (dev only)
+              if (diagnostics?.isEnabled) {
+                const latency = Date.now() - playStartTime;
+                diagnostics.recordPlayLatency('video2', latency);
+              }
+            }
+          );
+        } else {
+          // Lookahead scheduling for non-transport case
+          const now = Date.now();
+          const targetTime = now + PRELOAD_CONFIG.LOOKAHEAD_MS;
+          
+          // Schedule seek with lookahead
+          const scheduleSeek = () => {
+            seekSafe(player2, timestamp, true);
+            playVideo(player2);
+            
+            // Record play latency for diagnostics (dev only)
+            if (diagnostics?.isEnabled) {
+              const latency = Date.now() - playStartTime;
+              diagnostics.recordPlayLatency('video2', latency);
+            }
+          };
+          
+          if (PRELOAD_CONFIG.LOOKAHEAD_MS > 0) {
+            // Schedule with lookahead
+            const delay = Math.max(0, targetTime - now);
+            setTimeout(scheduleSeek, delay);
+            if (isDevUI) console.log(`🎵 Pad 2 scheduled with ${delay}ms lookahead`);
+          } else {
+            // Immediate execution
+            scheduleSeek();
+          }
+        }
         
       } catch (error) {
         console.error('Error triggering pad 2:', error);
@@ -568,11 +820,14 @@ export default function Home() {
     } else {
       console.warn('Player 2 not ready or not available');
     }
-  }, [player2, isPlayerReady2, pads2, player1, isPlayerReady1]);
+  }, [player2, isPlayerReady2, pads2, player1, isPlayerReady1, isTransportRunning, tracks]);
 
   const handlePadStop1 = useCallback(() => {
     if (player1 && isPlayerReady1) {
       pauseVideo(player1);
+      
+      // Cancel any scheduled plays for this track
+      transportManager.cancelScheduledPlay('video1');
       
       // Update all pads to not playing
       setPads1(prev => prev.map(pad => ({ ...pad, isPlaying: false })));
@@ -583,6 +838,9 @@ export default function Home() {
   const handlePadStop2 = useCallback(() => {
     if (player2 && isPlayerReady2) {
       pauseVideo(player2);
+      
+      // Cancel any scheduled plays for this track
+      transportManager.cancelScheduledPlay('video2');
       
       // Update all pads to not playing
       setPads2(prev => prev.map(pad => ({ ...pad, isPlaying: false })));
@@ -813,9 +1071,25 @@ export default function Home() {
             </div>
             
             {/* BPM Panel */}
-            <div className="flex-1 max-w-md">
-              <BpmPanel />
-            </div>
+            {isDevUI && (
+              <div className="flex-1 max-w-md">
+                <BpmPanel />
+              </div>
+            )}
+            
+            {/* Playlist Preload Control */}
+            {isDevUI && (
+              <div className="max-w-sm">
+                <PlaylistPreloadControl />
+              </div>
+            )}
+            
+            {/* Transport Control */}
+            {isDevUI && (
+              <div className="max-w-sm">
+                <TransportControl />
+              </div>
+            )}
             
             {/* Navigation & Help */}
             <div className="flex items-center gap-2">
@@ -845,7 +1119,7 @@ export default function Home() {
         <div className="flex-1 flex flex-col relative border-r border-white">
           {/* Video 1 Background - Full Column */}
           {videoId1 && (
-            <div className="absolute inset-0 z-0 w-full h-full">
+            <div id="video1-container" className="absolute inset-0 z-0 w-full h-full">
               <YouTubePlayer
                 videoId={videoId1}
                 onPlayerReady={handlePlayerReady1}
@@ -979,10 +1253,11 @@ export default function Home() {
             )}
           </div>
           
-          {/* Video 1 Pitch Control - Bottom of Column */}
+          {/* Video 1 Status & Pitch Control - Bottom of Column */}
           {videoId1 && (
-            <div className="relative z-10 px-4 pb-2">
-              <PitchControl trackId="video1" />
+            <div className="relative z-10 px-4 pb-2 space-y-2">
+              {isDevUI && <TrackStatus trackId="video1" />}
+              <PitchControl trackId="video1" isDevUI={isDevUI} />
             </div>
           )}
         </div>
@@ -991,7 +1266,7 @@ export default function Home() {
         <div className="flex-1 flex flex-col relative">
           {/* Video 2 Background - Full Column */}
           {videoId2 && (
-            <div className="absolute inset-0 z-0 w-full h-full">
+            <div id="video2-container" className="absolute inset-0 z-0 w-full h-full">
               <YouTubePlayer
                 videoId={videoId2}
                 onPlayerReady={handlePlayerReady2}
@@ -1126,10 +1401,11 @@ export default function Home() {
             )}
           </div>
           
-          {/* Video 2 Pitch Control - Bottom of Column */}
+          {/* Video 2 Status & Pitch Control - Bottom of Column */}
           {videoId2 && (
-            <div className="relative z-10 px-4 pb-4">
-              <PitchControl trackId="video2" />
+            <div className="relative z-10 px-4 pb-4 space-y-2">
+              {isDevUI && <TrackStatus trackId="video2" />}
+              <PitchControl trackId="video2" isDevUI={isDevUI} />
             </div>
           )}
         </div>
@@ -1255,6 +1531,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Dev Diagnostics Panel */}
+      {isDevUI && <DevDiagnosticsPanel />}
     </div>
   );
 }

@@ -1,9 +1,11 @@
+import { BPM_CONFIG, CLOCK_CONFIG } from '@/lib/config';
+
 /**
  * Clock class for managing timing and tempo
  * Provides BPM control and tempo change callbacks
  */
 export class Clock {
-  private bpm: number = 120;
+  private bpm: number = CLOCK_CONFIG.DEFAULT_BPM;
   private isRunning: boolean = false;
   private intervalId: NodeJS.Timeout | null = null;
   private tempoCallbacks: Array<(bpm: number) => void> = [];
@@ -58,8 +60,8 @@ export class Clock {
       const averageInterval = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
       const bpm = Math.round(60000 / averageInterval);
       
-      // Only update if BPM is reasonable (60-200)
-      if (bpm >= 60 && bpm <= 200) {
+      // Only update if BPM is reasonable (use config limits)
+      if (bpm >= BPM_CONFIG.MIN_BPM && bpm <= BPM_CONFIG.MAX_BPM) {
         this.setBpm(bpm);
       }
     }
@@ -89,7 +91,7 @@ export class Clock {
    * Set BPM and notify callbacks
    */
   setBpm(bpm: number): void {
-    if (bpm < 60 || bpm > 200) return;
+    if (bpm < BPM_CONFIG.MIN_BPM || bpm > BPM_CONFIG.MAX_BPM) return;
     
     this.bpm = bpm;
     this.tempoCallbacks.forEach(callback => callback(bpm));

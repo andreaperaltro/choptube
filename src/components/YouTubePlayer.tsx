@@ -59,15 +59,15 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
                 width: '100%',
                 videoId: videoId,
                 playerVars: {
-                  // Core functionality
-                  playsinline: 1,
+                  // Core functionality - iOS Safari optimized
+                  playsinline: 1, // Critical for iOS Safari
                   enablejsapi: 1,
                   origin: window.location.origin,
                   
-                  // Player behavior
-                  autoplay: 0,
-                  mute: 0,
-                  controls: 1,
+                  // Player behavior - iOS Safari compatible
+                  autoplay: 0, // Disabled to respect autoplay policies
+                  mute: 0, // Will be muted during preload
+                  controls: 0, // Hide controls for cleaner UI
                   disablekb: 0, // Keep keyboard controls for accessibility
                   
                   // Visual customization (current parameters)
