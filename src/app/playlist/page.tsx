@@ -290,56 +290,16 @@ export default function PlaylistPage() {
                 );
                 if (confirmed) {
                   console.log('🧹 Clearing playlist...', { before: videos.length });
-                  clear();
-                  console.log('🧹 Playlist cleared, checking store state...');
-                  // Check if clear actually worked
-                  setTimeout(() => {
-                    console.log('🧹 After clear - videos count:', videos.length);
-                    showSuccess('All videos cleared from playlist');
-                    window.location.reload();
-                  }, 100);
+                  // Use the working method: direct localStorage clear + reload
+                  localStorage.clear();
+                  console.log('🧹 All localStorage cleared, reloading...');
+                  window.location.reload();
                 }
               }}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
               disabled={!isHydrated || videos.length === 0}
             >
               Clear All
-            </button>
-            <button
-              onClick={() => {
-                debugPlaylistData();
-                console.log('Current videos in store:', videos);
-                console.log('Hydration status:', isHydrated);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              Debug
-            </button>
-            <button
-              onClick={async () => {
-                const confirmed = await showDangerConfirm(
-                  `NUCLEAR CLEAR: This will remove ALL ChopTube data from localStorage and force reload. This is the ultimate nuclear option.`,
-                  'Nuclear Clear All Data'
-                );
-                if (confirmed) {
-                  console.log('🧹 Nuclear clearing all data...');
-                  nuclearClear();
-                }
-              }}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-            >
-              Nuclear Clear
-            </button>
-            <button
-              onClick={() => {
-                console.log('🧹 Manual localStorage clear...');
-                localStorage.clear();
-                console.log('🧹 All localStorage cleared, reloading...');
-                window.location.reload();
-              }}
-              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-            >
-              Clear All Storage
             </button>
           </div>
         </div>

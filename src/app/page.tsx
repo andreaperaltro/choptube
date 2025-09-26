@@ -1555,29 +1555,15 @@ export default function Home() {
               </button>
               <button
                 onClick={() => {
-                  clearPlaylistData();
+                  // Use the working method: direct localStorage clear + reload
+                  localStorage.clear();
+                  console.log('🧹 All localStorage cleared, reloading...');
+                  window.location.reload();
                 }}
                 className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
               >
-                Clear Playlist
+                Clear All
               </button>
-            <button
-              onClick={() => {
-                clearAllChopTubeData();
-                window.location.reload();
-              }}
-              className="px-2 py-1 bg-orange-600 text-white text-xs rounded hover:bg-orange-700"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => {
-                nuclearClear();
-              }}
-              className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-            >
-              Nuclear Clear
-            </button>
             </div>
           </div>
         </div>
