@@ -59,7 +59,7 @@ export default function PlaylistPreloadControl() {
 
     try {
       // Get video IDs from playlist
-      const videoIds = videos.map(v => v.videoId);
+      const videoIds = videos.map(v => v.id);
       
       const result = await playlistPreloadManager.preloadCandidates(
         videoIds,

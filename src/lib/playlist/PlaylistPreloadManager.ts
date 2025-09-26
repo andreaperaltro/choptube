@@ -122,7 +122,7 @@ export class PlaylistPreloadManager {
       container.appendChild(playerContainer);
 
       try {
-        const player = new window.YT.Player(playerContainer, {
+        new window.YT.Player(playerContainer, {
           height: 240,
           width: 320,
           videoId: videoId,
@@ -225,8 +225,8 @@ export class PlaylistPreloadManager {
     if (hiddenPlayer) {
       try {
         // Destroy the YouTube player
-        if (hiddenPlayer.player && typeof (hiddenPlayer.player as any).destroy === 'function') {
-          (hiddenPlayer.player as any).destroy();
+        if (hiddenPlayer.player && typeof (hiddenPlayer.player as YT.Player).destroy === 'function') {
+          (hiddenPlayer.player as YT.Player).destroy();
         }
       } catch (error) {
         console.warn(`Error destroying hidden player ${videoId}:`, error);

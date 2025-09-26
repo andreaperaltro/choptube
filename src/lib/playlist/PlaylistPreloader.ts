@@ -4,14 +4,14 @@
  */
 
 import { autoPreloadPlayer } from '../youtube/autoPreload';
-import { policyGuard } from '../PolicyGuard';
+// Removed unused policyGuard import
 
 /**
  * Preloaded candidate video
  */
 interface PreloadedCandidate {
   videoId: string;
-  player: any; // YouTube player instance
+  player: YT.Player; // YouTube player instance
   iframe: HTMLIFrameElement;
   isReady: boolean;
   preloadTime: number;
@@ -129,7 +129,7 @@ class PlaylistPreloader {
       });
 
       // Wait for YouTube API to be ready
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         const checkAPI = () => {
           if (window.YT && window.YT.Player) {
             resolve();
@@ -146,14 +146,14 @@ class PlaylistPreloader {
           onReady: () => {
             console.debug(`PlaylistPreloader: Hidden player ready for ${videoId}`);
           },
-          onError: (event: any) => {
+          onError: (event: { data: number }) => {
             console.debug(`PlaylistPreloader: Hidden player error for ${videoId}:`, event.data);
           }
         }
       });
 
       // Wait for player to be ready
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         const checkReady = () => {
           if (player && typeof player.getCurrentTime === 'function') {
             resolve();

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePlaylistStore, PlaylistVideo, Pad, exportPlaylistToJSON, importPlaylistFromJSON, validatePlaylistJSON } from '@/store/playlist';
 import { useHydration } from '@/lib/hooks/useHydration';
-import { parseYouTubeId, generateYouTubeUrl } from '@/lib/yt/url';
+import { parseYouTubeId } from '@/lib/yt/url';
 import { normalizeUrl, isYouTubeUrl } from '@/lib/utils/url';
 import { showSuccess, showError, showWarning, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import { showDangerConfirm, showWarningConfirm } from '@/lib/utils/confirm';

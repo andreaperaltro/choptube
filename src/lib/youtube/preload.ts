@@ -29,12 +29,7 @@ const isIOSSafari = (): boolean => {
   return isIOS && isSafari;
 };
 
-/**
- * Check if autoplay is blocked (iOS Safari or other restrictions)
- */
-const isAutoplayBlocked = (): boolean => {
-  return isIOSSafari();
-};
+// Removed unused isAutoplayBlocked function
 
 /**
  * YouTube Player interface for preload operations
@@ -174,7 +169,7 @@ export class PreloadManager {
       ytPlayer.pauseVideo();
 
       // 5. Verify player is ready (not stuck in buffering)
-      await this.verifyPlayerReady(ytPlayer, trackId);
+      await this.verifyPlayerReady(ytPlayer);
 
       // Record successful preload in diagnostics
       const loadedFraction = ytPlayer.getVideoLoadedFraction();
@@ -231,7 +226,7 @@ export class PreloadManager {
    * @param player YouTube player instance
    * @param trackId Track identifier for error messages
    */
-  private async verifyPlayerReady(player: YouTubePlayer, trackId: string): Promise<void> {
+  private async verifyPlayerReady(player: YouTubePlayer): Promise<void> {
     // Wait a bit for player to stabilize
     await new Promise(resolve => setTimeout(resolve, 200));
     

@@ -91,7 +91,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads,
   }, [onPadTrigger, onSetTimestampFromCurrentTime]);
 
   // Long press handlers for touch devices
-  const handleTouchStart = useCallback((pad: DrumPad, _e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((pad: DrumPad) => {
     isLongPressRef.current = false;
     setTouchActivePad(pad.id);
     
@@ -103,7 +103,7 @@ export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads,
     }, 500); // 500ms for long press
   }, []);
 
-  const handleTouchEnd = useCallback((pad: DrumPad, _e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((pad: DrumPad) => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
@@ -182,8 +182,8 @@ export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads,
               <div className={`relative drum-pad-container ${touchActivePad === pad.id ? 'touch-active' : ''}`}>
                 <button
                   onClick={() => handlePadClick(pad)}
-                  onTouchStart={(e) => handleTouchStart(pad, e)}
-                  onTouchEnd={(e) => handleTouchEnd(pad, e)}
+                  onTouchStart={() => handleTouchStart(pad)}
+                  onTouchEnd={() => handleTouchEnd(pad)}
                   onTouchCancel={handleTouchCancel}
                   className={`
                     drum-pad w-12 h-12 xs:w-14 xs:h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-28 xl:h-28

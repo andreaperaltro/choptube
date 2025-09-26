@@ -115,7 +115,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
                       });
                     });
                   }
-                } catch (_e) {
+                } catch {
                   // Silently handle any errors
                 }
               };
@@ -145,7 +145,7 @@ export default function YouTubePlayer({ videoId, onPlayerReady, onPlayerStateCha
                       endScreenElements.forEach((el: Element) => {
                         (el as HTMLElement).style.display = 'none';
                       });
-                    } catch (_e) {
+                    } catch {
                       // Cross-origin restrictions may prevent this
                       console.log('Cannot access iframe content due to CORS');
                     }

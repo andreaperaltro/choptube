@@ -13,7 +13,7 @@ interface TrackStatusProps {
  * Track Status Component
  * Shows readiness status for individual tracks with retry functionality
  */
-export default function TrackStatus({ trackId, onRetry }: TrackStatusProps) {
+export default function TrackStatus({ trackId }: TrackStatusProps) {
   const { tracks, setTrackReady } = useProjectStore();
   const [loadedFraction, setLoadedFraction] = useState(0);
   const [isRetrying, setIsRetrying] = useState(false);

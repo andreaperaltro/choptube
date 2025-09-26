@@ -24,7 +24,7 @@ export async function autoPreloadPlayer(
     return false;
   }
 
-  const ytPlayer = player as any;
+  const ytPlayer = player as YT.Player;
   
   try {
     // 1. Ensure player is muted for autoplay compliance
@@ -66,7 +66,7 @@ export async function autoPreloadPlayer(
     
     try {
       await Promise.race([prerollPromise, timeoutPromise]);
-    } catch (timeoutError) {
+    } catch {
       console.debug(`PolicyGuard: Preroll timeout for ${trackId}, registering for retry`);
       policyGuard.registerPendingTrack(trackId, player, firstCueTime);
       return false;
@@ -102,7 +102,7 @@ export async function autoPreloadPlayer(
  * @param player YouTube player instance
  * @returns Promise that resolves when player is not buffering
  */
-async function waitForNonBuffering(player: any): Promise<void> {
+async function waitForNonBuffering(player: YT.Player): Promise<void> {
   return new Promise((resolve, reject) => {
     const checkState = () => {
       try {

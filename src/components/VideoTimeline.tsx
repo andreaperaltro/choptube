@@ -13,7 +13,6 @@ interface VideoTimelineProps {
 export default function VideoTimeline({ 
   player, 
   isPlayerReady, 
-  onTimestampSelect, 
   selectedTimestamp 
 }: VideoTimelineProps) {
   const [currentTime, setCurrentTime] = useState(0);

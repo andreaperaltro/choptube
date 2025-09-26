@@ -23,7 +23,7 @@ import { policyGuard } from '@/lib/PolicyGuard';
 import { playlistPreloader } from '@/lib/playlist/PlaylistPreloader';
 import { PRELOAD_CONFIG } from '@/lib/config';
 import { useDevUI } from '@/lib/DevUIContext';
-import { showSuccess, showError, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
+import { showSuccess, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import Link from 'next/link';
 
 interface DrumPad {
@@ -77,7 +77,6 @@ export default function Home() {
     rightVideoId,
     setLeftVideoId,
     setRightVideoId,
-    lookaheadMs,
     isTransportRunning
   } = useProjectStore();
   
@@ -163,7 +162,10 @@ export default function Home() {
   useEffect(() => {
     if (playlistVideos.length > 0) {
       const excludeVideoIds = [videoId1, videoId2].filter(Boolean);
-      playlistPreloader.preloadCandidates(playlistVideos, excludeVideoIds).then(result => {
+      playlistPreloader.preloadCandidates(
+        playlistVideos.map(video => ({ videoId: video.id, title: video.title })), 
+        excludeVideoIds
+      ).then(result => {
         if (result.success.length > 0) {
           console.debug(`PlaylistPreloader: Preloaded ${result.success.length} candidates`);
         }

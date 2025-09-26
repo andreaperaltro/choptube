@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useProjectStore, useAllReady } from '@/store/project';
+import { useProjectStore } from '@/store/project';
 import { transportManager } from '@/lib/transport/TransportManager';
 import { showSuccess, showWarning, showError } from '@/lib/utils/toast';
 
@@ -18,7 +18,7 @@ export default function TransportControl() {
     setTransportRunning 
   } = useProjectStore();
   
-  const allReady = useAllReady();
+  // Removed unused allReady variable
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 

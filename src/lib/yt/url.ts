@@ -71,7 +71,7 @@ export function parseYouTubeId(url: string): string | null {
     }
     
     return null;
-  } catch (error) {
+  } catch {
     // If URL parsing fails, try regex patterns as fallback
     
     // Match youtu.be links

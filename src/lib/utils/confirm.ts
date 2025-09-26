@@ -39,12 +39,7 @@ export function showConfirm(options: ConfirmOptions): Promise<boolean> {
     dialog.className = 'bg-gray-900 border border-gray-600 rounded-lg p-6 max-w-md w-full shadow-xl';
     dialog.onclick = (e) => e.stopPropagation();
 
-    // Icon based on type
-    const iconColors = {
-      danger: 'text-red-500',
-      warning: 'text-yellow-500',
-      info: 'text-blue-500'
-    };
+    // Icon based on type (removed unused iconColors)
 
     const icons = {
       danger: '⚠️',

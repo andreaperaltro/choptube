@@ -20,7 +20,7 @@ export function ensureGestureArmed(): void {
   try {
     // Create or resume AudioContext to capture user gesture
     if (!audioContext) {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     }
     
     // Resume AudioContext if suspended (captures user gesture)

@@ -192,7 +192,7 @@ export const useProjectStore = create<ProjectState>()(
         lookaheadMs: state.lookaheadMs, // Persist lookahead setting
         preloadPlaylistCandidates: state.preloadPlaylistCandidates, // Persist playlist preload setting
         maxPlaylistPreloads: state.maxPlaylistPreloads, // Persist max playlist preloads
-        tracks: state.tracks.map(({ playerRef: _, ...track }) => track), // Exclude playerRef from persistence
+        tracks: state.tracks.map(({ playerRef, ...track }) => track), // Exclude playerRef from persistence
       }),
     }
   )
