@@ -8,6 +8,7 @@ import { useProjectStore } from '@/store/project';
 import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate } from '@/lib/youtube/api';
 import BpmPanel from '@/features/bpm/BpmPanel';
 import PitchControl from '@/features/mixer/PitchControl';
+import Link from 'next/link';
 
 interface DrumPad {
   id: number;
@@ -695,14 +696,23 @@ export default function Home() {
               <BpmPanel />
             </div>
             
-            {/* Help Button */}
-            <button
-              onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
-              className="control-button font-medium text-sm"
-              title="Show keyboard shortcuts"
-            >
-              HELP
-            </button>
+            {/* Navigation & Help */}
+            <div className="flex items-center gap-2">
+              <Link
+                href="/playlist"
+                className="control-button font-medium text-sm"
+                title="Manage playlists"
+              >
+                PLAYLIST
+              </Link>
+              <button
+                onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+                className="control-button font-medium text-sm"
+                title="Show keyboard shortcuts"
+              >
+                HELP
+              </button>
+            </div>
           </div>
 
         </div>
