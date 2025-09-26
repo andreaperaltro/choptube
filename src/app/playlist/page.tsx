@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { usePlaylistStore, PlaylistVideo, Pad, exportPlaylistToJSON, importPlaylistFromJSON, validatePlaylistJSON } from '@/store/playlist';
+import { useHydration } from '@/lib/hooks/useHydration';
 import { parseYouTubeId, generateYouTubeUrl } from '@/lib/yt/url';
+import { normalizeUrl, isYouTubeUrl } from '@/lib/utils/url';
+import { showSuccess, showError, showWarning, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
+import { showDangerConfirm, showWarningConfirm } from '@/lib/utils/confirm';
 import Link from 'next/link';
 
 /**
@@ -23,41 +27,97 @@ export default function PlaylistPage() {
     getTotalPadsCount
   } = usePlaylistStore();
 
+  const isHydrated = useHydration();
+
   // UI State
   const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [urlError, setUrlError] = useState<string>('');
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [newPadTime, setNewPadTime] = useState('');
   const [newPadLabel, setNewPadLabel] = useState('');
   const [editingPad, setEditingPad] = useState<{ videoId: string; index: number } | null>(null);
   const [showImportExport, setShowImportExport] = useState(false);
   const [importData, setImportData] = useState('');
+  const [toastMessage, setToastMessage] = useState<ToastMessage>('');
+  const [toastOptions, setToastOptions] = useState<ToastOptions>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedVideo = selectedVideoId ? videos.find(v => v.id === selectedVideoId) : null;
+
+  // Register toast callback
+  useEffect(() => {
+    registerToast((message, options) => {
+      setToastMessage(message);
+      setToastOptions(options || {});
+    });
+  }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toastMessage) {
+      const timeout = setTimeout(() => {
+        setToastMessage('');
+        setToastOptions({});
+      }, toastOptions.duration || 4000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [toastMessage, toastOptions.duration]);
+
+  // Validate URL as user types
+  const handleUrlChange = (value: string) => {
+    setNewVideoUrl(value);
+    
+    if (value.trim() === '') {
+      setUrlError('');
+      return;
+    }
+    
+    const normalized = normalizeUrl(value);
+    if (!isYouTubeUrl(normalized)) {
+      setUrlError('Please enter a valid YouTube URL');
+    } else {
+      setUrlError('');
+    }
+  };
 
   /**
    * Add a new video to the playlist
    */
   const handleAddVideo = () => {
-    const videoId = parseYouTubeId(newVideoUrl);
-    if (!videoId) {
-      alert('Please enter a valid YouTube URL');
+    if (urlError) {
+      showError('Please fix the URL error before adding');
       return;
     }
 
+    const normalizedUrl = normalizeUrl(newVideoUrl);
+    const videoId = parseYouTubeId(normalizedUrl);
+    
+    if (!videoId) {
+      setUrlError('Invalid YouTube URL');
+      showError('Please enter a valid YouTube URL');
+      return;
+    }
+
+    const existingVideo = videos.find(v => v.id === videoId);
+    const isUpdate = !!existingVideo;
+
     const newVideo: PlaylistVideo = {
       id: videoId,
-      url: generateYouTubeUrl(videoId),
-      title: `Video ${videoId}`,
-      notes: '',
-      pads: [],
-      createdAt: Date.now(),
+      url: normalizedUrl,
+      title: existingVideo?.title || `Video ${videoId}`,
+      notes: existingVideo?.notes || '',
+      pads: existingVideo?.pads || [],
+      createdAt: existingVideo?.createdAt || Date.now(),
       updatedAt: Date.now(),
     };
 
     upsertVideo(newVideo);
     setNewVideoUrl('');
+    setUrlError('');
     setSelectedVideoId(videoId);
+    
+    showSuccess(isUpdate ? 'Video updated successfully' : 'Video added to playlist');
   };
 
   /**
@@ -68,7 +128,7 @@ export default function PlaylistPage() {
 
     const timeInSeconds = parseFloat(newPadTime);
     if (isNaN(timeInSeconds) || timeInSeconds < 0) {
-      alert('Please enter a valid time in seconds');
+      showError('Please enter a valid time in seconds');
       return;
     }
 
@@ -81,6 +141,8 @@ export default function PlaylistPage() {
     appendPad(selectedVideoId, newPad);
     setNewPadTime('');
     setNewPadLabel('');
+    
+    showSuccess(`Pad added at ${timeInSeconds}s`);
   };
 
   /**
@@ -97,37 +159,74 @@ export default function PlaylistPage() {
    * Export playlist to JSON
    */
   const handleExport = () => {
-    const exportData = exportPlaylistToJSON(videos);
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `choptube-playlist-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const exportData = exportPlaylistToJSON(videos);
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `choptube-playlist-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      showSuccess(`Exported ${videos.length} videos to JSON file`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      showError('Failed to export playlist');
+    }
   };
 
   /**
    * Import playlist from JSON
    */
-  const handleImport = () => {
+  const handleImport = async () => {
     try {
       const data = JSON.parse(importData);
       if (!validatePlaylistJSON(data)) {
-        alert('Invalid playlist format');
+        showError('Invalid playlist format. Please check your JSON file.');
         return;
       }
 
       const importedVideos = importPlaylistFromJSON(data);
-      importedVideos.forEach(video => upsertVideo(video));
+      const videoCount = importedVideos.length;
+      
+      if (videoCount === 0) {
+        showWarning('No videos found in the playlist file');
+        return;
+      }
+
+      // Confirm import if there are existing videos
+      if (videos.length > 0) {
+        const confirmed = await showWarningConfirm(
+          `This will merge ${videoCount} videos with your existing playlist. Existing videos with the same ID will be updated. Continue?`,
+          'Import Playlist'
+        );
+        
+        if (!confirmed) return;
+      }
+
+      let updatedCount = 0;
+      let addedCount = 0;
+
+      importedVideos.forEach(video => {
+        const exists = videos.some(v => v.id === video.id);
+        if (exists) {
+          updatedCount++;
+        } else {
+          addedCount++;
+        }
+        upsertVideo(video);
+      });
       
       setImportData('');
       setShowImportExport(false);
-      alert(`Imported ${importedVideos.length} videos successfully`);
+      
+      showSuccess(`Import complete: ${addedCount} added, ${updatedCount} updated`);
     } catch (error) {
-      alert('Failed to import playlist: ' + (error as Error).message);
+      console.error('Import failed:', error);
+      showError('Failed to parse JSON data. Please check your file format.');
     }
   };
 
@@ -169,7 +268,7 @@ export default function PlaylistPage() {
             </Link>
             <h1 className="text-2xl font-bold">Playlist Manager</h1>
             <div className="text-sm text-gray-400">
-              {getVideoCount()} videos • {getTotalPadsCount()} pads total
+              {isHydrated ? getVideoCount() : 0} videos • {isHydrated ? getTotalPadsCount() : 0} pads total
             </div>
           </div>
           
@@ -181,9 +280,18 @@ export default function PlaylistPage() {
               Import/Export
             </button>
             <button
-              onClick={() => confirm('Clear all videos?') && clear()}
+              onClick={async () => {
+                const confirmed = await showDangerConfirm(
+                  `This will permanently delete all ${isHydrated ? videos.length : 0} videos and their pads from your playlist. This action cannot be undone.`,
+                  'Clear All Videos'
+                );
+                if (confirmed) {
+                  clear();
+                  showSuccess('All videos cleared from playlist');
+                }
+              }}
               className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-              disabled={videos.length === 0}
+              disabled={!isHydrated || videos.length === 0}
             >
               Clear All
             </button>
@@ -199,7 +307,7 @@ export default function PlaylistPage() {
                 <button
                   onClick={handleExport}
                   className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                  disabled={videos.length === 0}
+                  disabled={!isHydrated || videos.length === 0}
                 >
                   Export Playlist JSON
                 </button>
@@ -252,11 +360,18 @@ export default function PlaylistPage() {
                 <input
                   type="text"
                   value={newVideoUrl}
-                  onChange={(e) => setNewVideoUrl(e.target.value)}
-                  placeholder="YouTube URL"
-                  className="w-full p-2 bg-gray-800 border border-gray-600 rounded text-white"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddVideo()}
+                  onChange={(e) => handleUrlChange(e.target.value)}
+                  placeholder="YouTube URL (paste any YouTube URL format)"
+                  className={`w-full p-2 bg-gray-800 border rounded text-white ${
+                    urlError 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-600 focus:ring-blue-500'
+                  } focus:outline-none focus:ring-1`}
+                  onKeyDown={(e) => e.key === 'Enter' && !urlError && handleAddVideo()}
                 />
+                {urlError && (
+                  <p className="text-red-400 text-sm mt-1">{urlError}</p>
+                )}
                 <button
                   onClick={handleAddVideo}
                   disabled={!newVideoUrl.trim()}
@@ -269,9 +384,9 @@ export default function PlaylistPage() {
 
             {/* Video List */}
             <div className="space-y-2">
-              <h3 className="font-semibold">Videos ({videos.length})</h3>
-              {videos.length === 0 ? (
-                <p className="text-gray-400 text-sm">No videos added yet</p>
+              <h3 className="font-semibold">Videos ({isHydrated ? videos.length : 0})</h3>
+              {!isHydrated || videos.length === 0 ? (
+                <p className="text-gray-400 text-sm">{!isHydrated ? "Loading..." : "No videos added yet"}</p>
               ) : (
                 videos.map((video) => (
                   <div
@@ -290,9 +405,19 @@ export default function PlaylistPage() {
                       {video.pads.length} pads • {video.id}
                     </div>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        confirm('Remove this video?') && removeVideo(video.id);
+                        const confirmed = await showDangerConfirm(
+                          `Remove "${video.title || video.id}" and all its ${video.pads.length} pads from the playlist?`,
+                          'Remove Video'
+                        );
+                        if (confirmed) {
+                          removeVideo(video.id);
+                          if (selectedVideoId === video.id) {
+                            setSelectedVideoId(null);
+                          }
+                          showSuccess('Video removed from playlist');
+                        }
                       }}
                       className="mt-2 px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
                     >
@@ -422,7 +547,16 @@ export default function PlaylistPage() {
                               Edit
                             </button>
                             <button
-                              onClick={() => removePad(selectedVideo.id, index)}
+                              onClick={async () => {
+                                const confirmed = await showDangerConfirm(
+                                  `Delete pad "${pad.label}" at ${pad.tSec}s?`,
+                                  'Delete Pad'
+                                );
+                                if (confirmed) {
+                                  removePad(selectedVideo.id, index);
+                                  showSuccess('Pad deleted');
+                                }
+                              }}
                               className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
                             >
                               Delete
@@ -501,6 +635,7 @@ export default function PlaylistPage() {
                     
                     updatePad(editingPad.videoId, editingPad.index, updatedPad);
                     setEditingPad(null);
+                    showSuccess('Pad updated successfully');
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
@@ -508,6 +643,36 @@ export default function PlaylistPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-sm ${
+          toastOptions.type === 'error' 
+            ? 'bg-red-600 text-white' 
+            : toastOptions.type === 'warning'
+            ? 'bg-yellow-600 text-white'
+            : toastOptions.type === 'success'
+            ? 'bg-green-600 text-white'
+            : 'bg-blue-600 text-white'
+        }`}>
+          <div className="flex items-center gap-2">
+            <div className="text-lg">
+              {toastOptions.type === 'error' ? '❌' : 
+               toastOptions.type === 'warning' ? '⚠️' : 
+               toastOptions.type === 'success' ? '✅' : 'ℹ️'}
+            </div>
+            <div className="flex-1">
+              {typeof toastMessage === 'string' ? toastMessage : toastMessage}
+            </div>
+            <button
+              onClick={() => setToastMessage('')}
+              className="text-white/80 hover:text-white ml-2"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

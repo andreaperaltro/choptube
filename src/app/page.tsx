@@ -8,6 +8,9 @@ import { useProjectStore } from '@/store/project';
 import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate } from '@/lib/youtube/api';
 import BpmPanel from '@/features/bpm/BpmPanel';
 import PitchControl from '@/features/mixer/PitchControl';
+import PlaylistDropdown from '@/components/PlaylistDropdown';
+import { usePlaylistStore } from '@/store/playlist';
+import { showSuccess, showError, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import Link from 'next/link';
 
 interface DrumPad {
@@ -52,7 +55,19 @@ export default function Home() {
   }, []);
 
   // Project store
-  const { tracks, registerPlayer, setTrackReady, addTrack } = useProjectStore();
+  const { 
+    tracks, 
+    registerPlayer, 
+    setTrackReady, 
+    addTrack,
+    leftVideoId,
+    rightVideoId,
+    setLeftVideoId,
+    setRightVideoId
+  } = useProjectStore();
+  
+  // Playlist store
+  const { getVideo } = usePlaylistStore();
   
   // Video 1 state
   const [videoId1, setVideoId1] = useState<string>('');
@@ -101,6 +116,30 @@ export default function Home() {
   const currentlyPlayingRef2 = useRef<number | null>(null);
   const loadingTimeoutRef1 = useRef<NodeJS.Timeout | null>(null);
   const loadingTimeoutRef2 = useRef<NodeJS.Timeout | null>(null);
+  
+  // Toast state
+  const [toastMessage, setToastMessage] = useState<ToastMessage>('');
+  const [toastOptions, setToastOptions] = useState<ToastOptions>({});
+
+  // Register toast callback
+  useEffect(() => {
+    registerToast((message, options) => {
+      setToastMessage(message);
+      setToastOptions(options || {});
+    });
+  }, []);
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toastMessage) {
+      const timeout = setTimeout(() => {
+        setToastMessage('');
+        setToastOptions({});
+      }, toastOptions.duration || 4000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [toastMessage, toastOptions.duration]);
 
   // Reset pads when video 1 changes
   useEffect(() => {
@@ -199,6 +238,86 @@ export default function Home() {
     return match ? match[1] : '';
   };
 
+  // Handle playlist video selection for left column
+  const handleLeftPlaylistSelection = useCallback((videoId: string | null) => {
+    setLeftVideoId(videoId);
+    if (videoId) {
+      const playlistVideo = getVideo(videoId);
+      if (playlistVideo) {
+        setVideoUrl1(playlistVideo.url);
+        setVideoId1(videoId);
+        setError1('');
+        
+        // Import timestamps to drum pads
+        if (playlistVideo.pads && playlistVideo.pads.length > 0) {
+          const newPads = playlistVideo.pads.slice(0, 16).map((pad, index) => ({
+            id: index,
+            label: pad.label || `Pad ${index + 1}`,
+            timestamp: pad.tSec,
+            isPlaying: false,
+            color: ''
+          }));
+          
+          // Fill remaining slots with empty pads
+          while (newPads.length < 16) {
+            newPads.push({
+              id: newPads.length,
+              label: `Pad ${newPads.length + 1}`,
+              timestamp: -1,
+              isPlaying: false,
+              color: ''
+            });
+          }
+          
+          setPads1(newPads);
+        }
+      } else {
+        setError1('Selected video no longer exists in playlist');
+        setLeftVideoId(null);
+      }
+    }
+  }, [setLeftVideoId, getVideo]);
+
+  // Handle playlist video selection for right column
+  const handleRightPlaylistSelection = useCallback((videoId: string | null) => {
+    setRightVideoId(videoId);
+    if (videoId) {
+      const playlistVideo = getVideo(videoId);
+      if (playlistVideo) {
+        setVideoUrl2(playlistVideo.url);
+        setVideoId2(videoId);
+        setError2('');
+        
+        // Import timestamps to drum pads
+        if (playlistVideo.pads && playlistVideo.pads.length > 0) {
+          const newPads = playlistVideo.pads.slice(0, 16).map((pad, index) => ({
+            id: index,
+            label: pad.label || `Pad ${index + 1}`,
+            timestamp: pad.tSec,
+            isPlaying: false,
+            color: ''
+          }));
+          
+          // Fill remaining slots with empty pads
+          while (newPads.length < 16) {
+            newPads.push({
+              id: newPads.length,
+              label: `Pad ${newPads.length + 1}`,
+              timestamp: -1,
+              isPlaying: false,
+              color: ''
+            });
+          }
+          
+          setPads2(newPads);
+        }
+      } else {
+        setError2('Selected video no longer exists in playlist');
+        setRightVideoId(null);
+      }
+    }
+  }, [setRightVideoId, getVideo]);
+
   const handlePaste1 = async () => {
     try {
       const text = await navigator.clipboard.readText();
@@ -284,6 +403,7 @@ export default function Home() {
     setIsLoading1(false);
     setError1(null);
     setShowSuccessMessage1(true);
+    showSuccess('Video 1 loaded successfully');
     
     // Add track to store if not exists
     const existingTrack = tracks.find(t => t.id === 'video1');
@@ -328,6 +448,7 @@ export default function Home() {
     setIsLoading2(false);
     setError2(null);
     setShowSuccessMessage2(true);
+    showSuccess('Video 2 loaded successfully');
     
     // Add track to store if not exists
     const existingTrack = tracks.find(t => t.id === 'video2');
@@ -741,6 +862,20 @@ export default function Home() {
               <div className="flex items-center gap-3 min-h-[44px] mb-4">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 1</h2>
                 
+                {/* Playlist Selection */}
+                <div className="flex-1">
+                  <PlaylistDropdown
+                    value={leftVideoId}
+                    onChange={handleLeftPlaylistSelection}
+                    placeholder="Choose from Playlist..."
+                    className="mb-2"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 min-h-[44px] mb-4">
+                <div className="min-w-[60px]"></div>
+                
                 {/* Video 1 URL Input */}
                 <form onSubmit={handleUrlSubmit1} className="flex gap-2 flex-1 items-center">
                   <div className="flex-1 relative">
@@ -870,8 +1005,22 @@ export default function Home() {
           <div className="relative z-10 flex-1 flex flex-col px-4">
             {/* Video 2 Controls */}
             <div className="bg-black/80 backdrop-blur-sm px-8 py-6 border-b border-gray-600 relative z-10">
-              <div className="flex items-center gap-3 min-h-[44px]">
+              <div className="flex items-center gap-3 min-h-[44px] mb-4">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 2</h2>
+                
+                {/* Playlist Selection */}
+                <div className="flex-1">
+                  <PlaylistDropdown
+                    value={rightVideoId}
+                    onChange={handleRightPlaylistSelection}
+                    placeholder="Choose from Playlist..."
+                    className="mb-2"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 min-h-[44px]">
+                <div className="min-w-[60px]"></div>
                 
                 {/* Video 2 URL Input */}
                 <form onSubmit={handleUrlSubmit2} className="flex gap-2 flex-1 items-center">
@@ -1073,6 +1222,36 @@ export default function Home() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg z-50 max-w-sm ${
+          toastOptions.type === 'error' 
+            ? 'bg-red-600 text-white' 
+            : toastOptions.type === 'warning'
+            ? 'bg-yellow-600 text-white'
+            : toastOptions.type === 'success'
+            ? 'bg-green-600 text-white'
+            : 'bg-blue-600 text-white'
+        }`}>
+          <div className="flex items-center gap-2">
+            <div className="text-lg">
+              {toastOptions.type === 'error' ? '❌' : 
+               toastOptions.type === 'warning' ? '⚠️' : 
+               toastOptions.type === 'success' ? '✅' : 'ℹ️'}
+            </div>
+            <div className="flex-1">
+              {typeof toastMessage === 'string' ? toastMessage : toastMessage}
+            </div>
+            <button
+              onClick={() => setToastMessage('')}
+              className="text-white/80 hover:text-white ml-2"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

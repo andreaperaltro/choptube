@@ -19,6 +19,8 @@ interface ProjectState {
   quantizedRate: number; // New: Last applied quantized rate
   quantizeToYouTubeRates: boolean; // New: Whether to quantize to YouTube rates
   selectedTrackId: string | null; // Currently selected/focused track for shortcuts
+  leftVideoId: string | null; // Selected playlist video for left column
+  rightVideoId: string | null; // Selected playlist video for right column
   tracks: Track[];
   
   // Actions
@@ -28,6 +30,8 @@ interface ProjectState {
   setQuantizedRate: (rate: number) => void; // New: Action to set quantized rate
   setQuantizeToYouTubeRates: (enabled: boolean) => void; // New: Action to toggle quantization
   setSelectedTrackId: (trackId: string | null) => void; // New: Action to set selected track
+  setLeftVideoId: (videoId: string | null) => void; // New: Action to set left video
+  setRightVideoId: (videoId: string | null) => void; // New: Action to set right video
   registerPlayer: (trackId: string, player: unknown) => void;
   setTrackVolume: (trackId: string, volume: number) => void;
   setTrackRate: (trackId: string, rate: number) => void;
@@ -50,6 +54,8 @@ export const useProjectStore = create<ProjectState>()(
       quantizedRate: 1, // Default to 1x (no rate change)
       quantizeToYouTubeRates: true, // Default to enabled
       selectedTrackId: null, // No track selected by default
+      leftVideoId: null, // No left video selected by default
+      rightVideoId: null, // No right video selected by default
       tracks: [],
 
       setBpm: (bpm: number) => {
@@ -74,6 +80,14 @@ export const useProjectStore = create<ProjectState>()(
 
       setSelectedTrackId: (trackId: string | null) => {
         set({ selectedTrackId: trackId });
+      },
+
+      setLeftVideoId: (videoId: string | null) => {
+        set({ leftVideoId: videoId });
+      },
+
+      setRightVideoId: (videoId: string | null) => {
+        set({ rightVideoId: videoId });
       },
 
       registerPlayer: (trackId: string, player: unknown) => {
@@ -136,6 +150,9 @@ export const useProjectStore = create<ProjectState>()(
         referenceBpm: state.referenceBpm,
         quantizedRate: state.quantizedRate, // Persist quantized rate
         quantizeToYouTubeRates: state.quantizeToYouTubeRates, // Persist quantization setting
+        selectedTrackId: state.selectedTrackId, // Persist selected track ID
+        leftVideoId: state.leftVideoId, // Persist left video selection
+        rightVideoId: state.rightVideoId, // Persist right video selection
         tracks: state.tracks.map(({ playerRef: _, ...track }) => track), // Exclude playerRef from persistence
       }),
     }
