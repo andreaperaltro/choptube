@@ -27,6 +27,7 @@ import { useDevUI } from '@/lib/DevUIContext';
 import { showSuccess, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import { clearAllChopTubeData, debugPlaylistData, clearPlaylistData, nuclearClear } from '@/lib/utils/debug';
 import Link from 'next/link';
+import { PanelsLeftRight, Layout } from 'lucide-react';
 
 interface DrumPad {
   id: number;
@@ -194,6 +195,7 @@ export default function Home() {
   const [buttonText1, setButtonText1] = useState('Paste');
   const [buttonText2, setButtonText2] = useState('Paste');
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [viewMode, setViewMode] = useState<'split' | 'mono'>('split');
   const currentlyPlayingRef1 = useRef<number | null>(null);
   const currentlyPlayingRef2 = useRef<number | null>(null);
   const loadingTimeoutRef1 = useRef<NodeJS.Timeout | null>(null);
@@ -1101,6 +1103,34 @@ export default function Home() {
               </div>
             )}
             
+            {/* View mode: Split / Mono */}
+            <div className="flex items-center gap-1 border-r border-gray-600 pr-2 mr-2">
+              <button
+                onClick={() => setViewMode('split')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'split'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                }`}
+                title="Split screen (two videos)"
+                aria-label="Split screen"
+              >
+                <PanelsLeftRight className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('mono')}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === 'mono'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-700'
+                }`}
+                title="Mono screen (one video)"
+                aria-label="Mono screen"
+              >
+                <Layout className="w-5 h-5" />
+              </button>
+            </div>
+
             {/* Navigation & Help */}
             <div className="flex items-center gap-2">
               <Link
@@ -1123,10 +1153,12 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Dual Column Layout */}
-      <div className="flex flex-row h-[calc(100vh-60px)]">
+      {/* Main content: split (two columns) or mono (one column) */}
+      <div className={`flex h-[calc(100vh-60px)] ${viewMode === 'split' ? 'flex-row' : ''}`}>
         {/* Video 1 Column */}
-        <div className="flex-1 flex flex-col relative border-r border-white">
+        <div
+          className={`flex flex-col relative ${viewMode === 'split' ? 'flex-1 border-r border-white' : 'w-full'}`}
+        >
           {/* Video 1 Background - Full Column */}
           {videoId1 && (
             <div id="video1-container" className="absolute inset-0 z-0 w-full h-full">
@@ -1273,7 +1305,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* Video 2 Column */}
+        {/* Video 2 Column - only in split mode */}
+        {viewMode === 'split' && (
         <div className="flex-1 flex flex-col relative">
           {/* Video 2 Background - Full Column */}
           {videoId2 && (
@@ -1421,6 +1454,7 @@ export default function Home() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Keyboard Help Overlay */}
