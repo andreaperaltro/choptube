@@ -607,3 +607,17 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 [class*="ytp-suggestion"] {
   display: none !important;
 }
+
+/* Hide Next.js dev indicator / toolbar completely */
+[data-nextjs-dialog],
+[data-nextjs-toast-errors-parent],
+[data-nextjs-portal],
+next-route-announcer,
+#__next-build-watcher,
+[class*="nextjs-dev-indicator"],
+[class*="nextjs-build-indicator"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

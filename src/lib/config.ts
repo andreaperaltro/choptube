@@ -35,10 +35,15 @@ export const PRELOAD_CONFIG = {
 
 // YouTube Configuration
 export const YOUTUBE_CONFIG = {
-  /** Allowed playback rates for YouTube */
+  /** Allowed playback rates for YouTube (API only accepts these) */
   ALLOWED_RATES: [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2] as const,
   /** Default playback rate */
   DEFAULT_RATE: 1.0,
+  /** UI pitch step (fine control; applied rate is quantized to ALLOWED_RATES) */
+  PITCH_STEP: 0.05,
+  /** Min/max pitch in UI */
+  PITCH_MIN: 0.25,
+  PITCH_MAX: 2,
 } as const;
 
 // Clock Configuration

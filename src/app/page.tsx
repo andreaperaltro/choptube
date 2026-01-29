@@ -5,10 +5,11 @@ import Image from 'next/image';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
 import { useProjectStore, useAllReady } from '@/store/project';
-import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate } from '@/lib/youtube/api';
+import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate, setVolumeToPlayer, isPlayerReady } from '@/lib/youtube/api';
 import { transportManager } from '@/lib/transport/TransportManager';
 import BpmPanel from '@/features/bpm/BpmPanel';
 import PitchControl from '@/features/mixer/PitchControl';
+import VolumeControl from '@/features/mixer/VolumeControl';
 import PlaylistDropdown from '@/components/PlaylistDropdown';
 import TrackStatus from '@/components/TrackStatus';
 import TransportControl from '@/components/TransportControl';
@@ -543,12 +544,15 @@ export default function Home() {
     registerPlayer('video1', playerInstance);
     setTrackReady('video1', true);
     
-    // Apply saved rate if different from default
-    const trackWithRate = tracks.find(t => t.id === 'video1');
-    if (trackWithRate?.rate && trackWithRate.rate !== 1.0) {
-      console.log(`🎵 Restoring saved rate ${trackWithRate.rate}x for video1`);
-      applyPlaybackRate(playerInstance, trackWithRate.rate);
-    }
+    // Apply stored rate and volume to player (read store after register so state is fresh)
+    setTimeout(() => {
+      const state = useProjectStore.getState();
+      const t = state.tracks.find((x) => x.id === 'video1');
+      if (t && isPlayerReady(playerInstance)) {
+        applyPlaybackRate(playerInstance, t.rate ?? 1);
+        setVolumeToPlayer(playerInstance, t.volume ?? 1);
+      }
+    }, 0);
     
     // Clear the loading timeout since video loaded successfully
     if (loadingTimeoutRef1.current) {
@@ -605,12 +609,15 @@ export default function Home() {
     registerPlayer('video2', playerInstance);
     setTrackReady('video2', true);
     
-    // Apply saved rate if different from default
-    const trackWithRate = tracks.find(t => t.id === 'video2');
-    if (trackWithRate?.rate && trackWithRate.rate !== 1.0) {
-      console.log(`🎵 Restoring saved rate ${trackWithRate.rate}x for video2`);
-      applyPlaybackRate(playerInstance, trackWithRate.rate);
-    }
+    // Apply stored rate and volume to player (read store after register so state is fresh)
+    setTimeout(() => {
+      const state = useProjectStore.getState();
+      const t = state.tracks.find((x) => x.id === 'video2');
+      if (t && isPlayerReady(playerInstance)) {
+        applyPlaybackRate(playerInstance, t.rate ?? 1);
+        setVolumeToPlayer(playerInstance, t.volume ?? 1);
+      }
+    }, 0);
     
     // Clear the loading timeout since video loaded successfully
     if (loadingTimeoutRef2.current) {
@@ -1256,10 +1263,11 @@ export default function Home() {
             )}
           </div>
           
-          {/* Video 1 Status & Pitch Control - Bottom of Column */}
+          {/* Video 1 Status, Volume & Pitch - Bottom of Column */}
           {videoId1 && (
             <div className="relative z-10 px-4 pb-2 space-y-2">
               {isDevUI && <TrackStatus trackId="video1" />}
+              <VolumeControl trackId="video1" />
               <PitchControl trackId="video1" isDevUI={isDevUI} />
             </div>
           )}
@@ -1404,10 +1412,11 @@ export default function Home() {
             )}
           </div>
           
-          {/* Video 2 Status & Pitch Control - Bottom of Column */}
+          {/* Video 2 Status, Volume & Pitch - Bottom of Column */}
           {videoId2 && (
             <div className="relative z-10 px-4 pb-4 space-y-2">
               {isDevUI && <TrackStatus trackId="video2" />}
+              <VolumeControl trackId="video2" />
               <PitchControl trackId="video2" isDevUI={isDevUI} />
             </div>
           )}

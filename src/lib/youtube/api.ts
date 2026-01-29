@@ -71,21 +71,18 @@ export function applyPlaybackRate(
     // Apply the rate
     typedPlayer.setPlaybackRate(clampedRate);
     
-    // Verify the rate was applied (some videos don't support certain rates)
+    // Optional verification (log only – do not revert store; YouTube can report delayed values)
     setTimeout(() => {
       try {
         const actualRate = typedPlayer.getPlaybackRate?.();
-        if (actualRate && Math.abs(actualRate - clampedRate) > 0.01) {
-          const errorMsg = `Rate ${clampedRate}x not supported on this video`;
-          console.warn(errorMsg);
-          if (onError) {
-            onError(errorMsg);
-          }
+        if (actualRate != null && Math.abs(actualRate - clampedRate) > 0.01) {
+          console.warn(`Rate ${clampedRate}x may not be supported on this video (reported ${actualRate}x)`);
+          // Do not call onError here – it was reverting the user's choice
         }
       } catch {
-        // Ignore verification errors
+        // Ignore
       }
-    }, 100);
+    }, 150);
     
     // Log only significant changes
     if (Math.abs(clampedRate - 1) > 0.01) {
@@ -303,6 +300,23 @@ export function pauseVideo(player: unknown): void {
     typedPlayer.pauseVideo();
   } catch (error) {
     console.error('Failed to pause video:', error);
+  }
+}
+
+/**
+ * Set volume on a YouTube player
+ * @param player - YouTube player instance
+ * @param volumeZeroToOne - Volume from 0 to 1 (will be converted to 0–100 for YouTube)
+ */
+export function setVolumeToPlayer(player: unknown, volumeZeroToOne: number): void {
+  if (!player) return;
+  const typedPlayer = player as YouTubePlayer;
+  if (typeof typedPlayer.setVolume !== 'function') return;
+  const pct = Math.round(Math.max(0, Math.min(1, volumeZeroToOne)) * 100);
+  try {
+    typedPlayer.setVolume(pct);
+  } catch (error) {
+    console.warn('Failed to set volume:', error);
   }
 }
 
