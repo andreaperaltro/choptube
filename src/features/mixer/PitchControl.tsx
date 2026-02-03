@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useProjectStore } from '@/store/project';
 import { applyPlaybackRate, isPlayerReady } from '@/lib/youtube/api';
 import { showToast } from '@/lib/utils/toast';
@@ -14,7 +14,7 @@ const PITCH_MAX = YOUTUBE_CONFIG.PITCH_MAX;
 /** Display/sanitize rate: only show allowed values, default 1.0 */
 function displayRateFromTrack(rate: unknown): number {
   const r = typeof rate === 'number' && Number.isFinite(rate) ? rate : 1.0;
-  return ALLOWED_RATES.includes(r) ? r : 1.0;
+  return (ALLOWED_RATES as readonly number[]).includes(r) ? r : 1.0;
 }
 
 /**
