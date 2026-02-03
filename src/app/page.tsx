@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import YouTubePlayer from '@/components/YouTubePlayer';
 import DrumMachine from '@/components/DrumMachine';
-import { useProjectStore, useAllReady } from '@/store/project';
+import { useProjectStore, useAllReady, sanitizeTrackRate } from '@/store/project';
 import { seekSafe, playVideo, pauseVideo, getCurrentTime, getDuration, applyPlaybackRate, setVolumeToPlayer, isPlayerReady } from '@/lib/youtube/api';
 import { transportManager } from '@/lib/transport/TransportManager';
 import BpmPanel from '@/features/bpm/BpmPanel';
@@ -24,8 +24,10 @@ import { policyGuard } from '@/lib/PolicyGuard';
 import { playlistPreloader } from '@/lib/playlist/PlaylistPreloader';
 import { PRELOAD_CONFIG } from '@/lib/config';
 import { useDevUI } from '@/lib/DevUIContext';
-import { showSuccess, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
+import { showSuccess, showError, registerToast, ToastMessage, ToastOptions } from '@/lib/utils/toast';
 import { clearAllChopTubeData, debugPlaylistData, clearPlaylistData, nuclearClear } from '@/lib/utils/debug';
+import { fetchYouTubeTitleWithFallback } from '@/lib/yt/title';
+import { normalizeUrl } from '@/lib/utils/url';
 import Link from 'next/link';
 import { PanelsLeftRight, Layout } from 'lucide-react';
 
@@ -117,7 +119,7 @@ export default function Home() {
   }, [allReady, tracks.length]);
 
   // Playlist store
-  const { getVideo, getAllVideos, clear } = usePlaylistStore();
+  const { getVideo, getAllVideos, clear, upsertVideo } = usePlaylistStore();
   const playlistVideos = getAllVideos();
 
   // Clean up preloaded players when playlist videos are removed
@@ -551,7 +553,7 @@ export default function Home() {
       const state = useProjectStore.getState();
       const t = state.tracks.find((x) => x.id === 'video1');
       if (t && isPlayerReady(playerInstance)) {
-        applyPlaybackRate(playerInstance, t.rate ?? 1);
+        applyPlaybackRate(playerInstance, sanitizeTrackRate(t.rate));
         setVolumeToPlayer(playerInstance, t.volume ?? 1);
       }
     }, 0);
@@ -616,7 +618,7 @@ export default function Home() {
       const state = useProjectStore.getState();
       const t = state.tracks.find((x) => x.id === 'video2');
       if (t && isPlayerReady(playerInstance)) {
-        applyPlaybackRate(playerInstance, t.rate ?? 1);
+        applyPlaybackRate(playerInstance, sanitizeTrackRate(t.rate));
         setVolumeToPlayer(playerInstance, t.volume ?? 1);
       }
     }, 0);
@@ -686,9 +688,8 @@ export default function Home() {
 
         // Apply playback rate before seeking
         const track = tracks.find(t => t.id === 'video1');
-        if (track?.rate && track.rate !== 1.0) {
-          applyPlaybackRate(player1, track.rate);
-        }
+        const rate1 = track ? sanitizeTrackRate(track.rate) : 1;
+        if (rate1 !== 1) applyPlaybackRate(player1, rate1);
 
         // Use transport manager for lookahead seeking if transport is running
         if (isTransportRunning) {
@@ -778,9 +779,8 @@ export default function Home() {
 
         // Apply playback rate before seeking
         const track = tracks.find(t => t.id === 'video2');
-        if (track?.rate && track.rate !== 1.0) {
-          applyPlaybackRate(player2, track.rate);
-        }
+        const rate2 = track ? sanitizeTrackRate(track.rate) : 1;
+        if (rate2 !== 1) applyPlaybackRate(player2, rate2);
 
         // Use transport manager for lookahead seeking if transport is running
         if (isTransportRunning) {
@@ -921,6 +921,98 @@ export default function Home() {
       }
     }
   }, [player2, isPlayerReady2]);
+
+  /**
+   * Save Video 1 and its pads to playlist
+   */
+  const handleSaveToPlaylist1 = useCallback(async () => {
+    if (!videoId1) {
+      showError('No video loaded');
+      return;
+    }
+
+    try {
+      // Fetch YouTube title
+      const title = await fetchYouTubeTitleWithFallback(videoId1, `Video ${videoId1}`);
+      
+      // Convert pads: filter valid pads (timestamp >= 0) and convert format
+      const playlistPads = pads1
+        .filter(pad => pad.timestamp >= 0)
+        .map(pad => ({
+          label: pad.label || undefined,
+          tSec: pad.timestamp,
+          offsetMs: 0,
+        }));
+
+      // Get normalized URL
+      const normalizedUrl = normalizeUrl(videoUrl1 || `https://www.youtube.com/watch?v=${videoId1}`);
+
+      // Create playlist video
+      const playlistVideo = {
+        id: videoId1,
+        url: normalizedUrl,
+        title,
+        notes: '',
+        pads: playlistPads,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      // Save to playlist
+      upsertVideo(playlistVideo);
+      
+      showSuccess(`Saved "${title}" to playlist with ${playlistPads.length} pads`);
+    } catch (error) {
+      console.error('Failed to save video 1 to playlist:', error);
+      showError('Failed to save video to playlist');
+    }
+  }, [videoId1, videoUrl1, pads1, upsertVideo]);
+
+  /**
+   * Save Video 2 and its pads to playlist
+   */
+  const handleSaveToPlaylist2 = useCallback(async () => {
+    if (!videoId2) {
+      showError('No video loaded');
+      return;
+    }
+
+    try {
+      // Fetch YouTube title
+      const title = await fetchYouTubeTitleWithFallback(videoId2, `Video ${videoId2}`);
+      
+      // Convert pads: filter valid pads (timestamp >= 0) and convert format
+      const playlistPads = pads2
+        .filter(pad => pad.timestamp >= 0)
+        .map(pad => ({
+          label: pad.label || undefined,
+          tSec: pad.timestamp,
+          offsetMs: 0,
+        }));
+
+      // Get normalized URL
+      const normalizedUrl = normalizeUrl(videoUrl2 || `https://www.youtube.com/watch?v=${videoId2}`);
+
+      // Create playlist video
+      const playlistVideo = {
+        id: videoId2,
+        url: normalizedUrl,
+        title,
+        notes: '',
+        pads: playlistPads,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      // Save to playlist
+      upsertVideo(playlistVideo);
+      
+      showSuccess(`Saved "${title}" to playlist with ${playlistPads.length} pads`);
+    } catch (error) {
+      console.error('Failed to save video 2 to playlist:', error);
+      showError('Failed to save video to playlist');
+    }
+  }, [videoId2, videoUrl2, pads2, upsertVideo]);
 
   const handlePlayerStateChange1 = useCallback((event: YT.OnStateChangeEvent) => {
     console.log('Player 1 state changed to:', event.data);
@@ -1230,6 +1322,17 @@ export default function Home() {
                     AUTO-QUANTIZE
                   </button>
                 )}
+                
+                {/* Save to Playlist Button */}
+                {isPlayerReady1 && videoId1 && (
+                  <button
+                    onClick={handleSaveToPlaylist1}
+                    className="control-button text-sm bg-green-600 hover:bg-green-700"
+                    title="Save video and pads to playlist"
+                  >
+                    SAVE TO PLAYLIST
+                  </button>
+                )}
               </div>
 
               {/* Video 1 Error Display */}
@@ -1377,6 +1480,17 @@ export default function Home() {
                     title="Auto-quantize video 2"
                   >
                     AUTO-QUANTIZE
+                  </button>
+                )}
+                
+                {/* Save to Playlist Button */}
+                {isPlayerReady2 && videoId2 && (
+                  <button
+                    onClick={handleSaveToPlaylist2}
+                    className="control-button text-sm bg-green-600 hover:bg-green-700"
+                    title="Save video and pads to playlist"
+                  >
+                    SAVE TO PLAYLIST
                   </button>
                 )}
               </div>

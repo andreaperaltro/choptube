@@ -193,14 +193,21 @@ export default function DrumMachine({ onPadTrigger, onPadStop: _onPadStop, pads,
                     min-h-[48px] min-w-[48px]
                   `}
                 >
-                  {/* Two-row layout */}
-                  <div className="flex flex-col items-center justify-center space-y-1">
+                  {/* Key, label, timestamp */}
+                  <div className="flex flex-col items-center justify-center space-y-0.5 min-w-0 w-full px-0.5">
                     {/* Top row - Letter */}
-                    <div className="text-xs sm:text-sm font-bold text-white bg-black/50 px-1 rounded">
+                    <div className="text-xs sm:text-sm font-bold text-white bg-black/50 px-1 rounded shrink-0">
                       {getKeyForPad(pad.id)}
                     </div>
                     
-                    {/* Bottom row - Timestamp only */}
+                    {/* Label (when set) */}
+                    {pad.label && pad.label.trim() !== '' && (
+                      <div className="text-[9px] xs:text-[10px] sm:text-xs text-white font-medium truncate max-w-full" title={pad.label}>
+                        {pad.label}
+                      </div>
+                    )}
+                    
+                    {/* Timestamp */}
                     <div className="text-[10px] sm:text-xs md:text-sm text-white font-mono opacity-80">
                       {pad.timestamp >= 0 ? formatTime(pad.timestamp) : ''}
                     </div>

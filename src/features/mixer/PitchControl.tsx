@@ -11,6 +11,12 @@ const PITCH_STEP = YOUTUBE_CONFIG.PITCH_STEP;
 const PITCH_MIN = YOUTUBE_CONFIG.PITCH_MIN;
 const PITCH_MAX = YOUTUBE_CONFIG.PITCH_MAX;
 
+/** Display/sanitize rate: only show allowed values, default 1.0 */
+function displayRateFromTrack(rate: unknown): number {
+  const r = typeof rate === 'number' && Number.isFinite(rate) ? rate : 1.0;
+  return ALLOWED_RATES.includes(r) ? r : 1.0;
+}
+
 /**
  * Quantize a raw rate to the nearest allowed YouTube rate
  */
@@ -32,8 +38,7 @@ export default function PitchControl({ trackId, isDevUI = false }: PitchControlP
   const { tracks, setTrackRate, selectedTrackId, setSelectedTrackId } = useProjectStore();
   
   const track = tracks.find(t => t.id === trackId);
-  const currentRate = Math.round((track?.rate ?? 1.0) * 100) / 100;
-  const displayRate = currentRate; // show fine value; API gets quantized
+  const displayRate = Math.round(displayRateFromTrack(track?.rate) * 100) / 100;
 
   const applyRateToPlayer = useCallback((playerRef: unknown, rate: number) => {
     if (!playerRef || !isPlayerReady(playerRef)) return false;
@@ -68,9 +73,10 @@ export default function PitchControl({ trackId, isDevUI = false }: PitchControlP
     const state = useProjectStore.getState();
     const t = state.tracks.find((x) => x.id === trackId);
     if (!t?.playerRef || !isPlayerReady(t.playerRef)) return;
-    const rate = t.rate ?? 1.0;
+    const rate = displayRateFromTrack(t.rate);
+    if (t.rate !== rate) setTrackRate(trackId, rate); // fix store if invalid (e.g. persisted 0.35)
     applyRateToPlayer(t.playerRef, quantizeToAllowedRate(rate));
-  }, [track?.rate, track?.playerRef, track?.ready, trackId, applyRateToPlayer]);
+  }, [track?.rate, track?.playerRef, track?.ready, trackId, applyRateToPlayer, setTrackRate]);
 
   const handleReset = useCallback(() => {
     handleRateChange(1.0);

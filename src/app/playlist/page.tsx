@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { usePlaylistStore, PlaylistVideo, Pad, exportPlaylistToJSON, importPlaylistFromJSON, validatePlaylistJSON } from '@/store/playlist';
 import { useHydration } from '@/lib/hooks/useHydration';
 import { parseYouTubeId } from '@/lib/yt/url';
@@ -52,7 +53,11 @@ export default function PlaylistPage() {
   const [importData, setImportData] = useState('');
   const [toastMessage, setToastMessage] = useState<ToastMessage>('');
   const [toastOptions, setToastOptions] = useState<ToastOptions>({});
+  const [mounted, setMounted] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Portal target only exists on client; avoid SSR/hydration issues
+  useEffect(() => setMounted(true), []);
 
   const selectedVideo = selectedVideoId ? videos.find(v => v.id === selectedVideoId) : null;
 
@@ -626,45 +631,70 @@ export default function PlaylistPage() {
         </div>
       </div>
 
-      {/* Edit Pad Modal */}
-      {editingPad && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="font-semibold mb-4">Edit Pad</h3>
+      {/* Edit Pad Modal - portal to body so fixed = viewport; dialog explicitly centered */}
+      {editingPad && mounted && typeof document !== 'undefined' && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] bg-black/60"
+          style={{ position: 'fixed', left: 0, right: 0, top: 0, bottom: 0 }}
+          onClick={() => setEditingPad(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-pad-title"
+        >
+          <div 
+            className="p-6 rounded-lg shadow-2xl border border-gray-300"
+            style={{
+              position: 'fixed',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 'min(90vw, 22rem)',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              backgroundColor: '#f3f4f6',
+              color: '#111827',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="edit-pad-title" className="font-semibold mb-4" style={{ color: '#111827' }}>Edit Pad</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Time (seconds)</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#1f2937' }}>Time (seconds)</label>
                 <input
                   type="number"
                   defaultValue={selectedVideo?.pads[editingPad.index]?.tSec || 0}
                   step="0.1"
                   min="0"
-                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  className="w-full p-2 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{ backgroundColor: '#ffffff', color: '#111827', border: '1px solid #9ca3af' }}
                   id="edit-time"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Label</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#1f2937' }}>Label</label>
                 <input
                   type="text"
                   defaultValue={selectedVideo?.pads[editingPad.index]?.label || ''}
-                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  className="w-full p-2 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{ backgroundColor: '#ffffff', color: '#111827', border: '1px solid #9ca3af' }}
                   id="edit-label"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Offset (ms)</label>
+                <label className="block text-sm font-medium mb-2" style={{ color: '#1f2937' }}>Offset (ms)</label>
                 <input
                   type="number"
                   defaultValue={selectedVideo?.pads[editingPad.index]?.offsetMs || 0}
-                  className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
+                  className="w-full p-2 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={{ backgroundColor: '#ffffff', color: '#111827', border: '1px solid #9ca3af' }}
                   id="edit-offset"
                 />
               </div>
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setEditingPad(null)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+                  className="px-4 py-2 rounded"
+                  style={{ backgroundColor: '#d1d5db', color: '#1f2937' }}
                 >
                   Cancel
                 </button>
@@ -691,7 +721,8 @@ export default function PlaylistPage() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Toast Notification */}

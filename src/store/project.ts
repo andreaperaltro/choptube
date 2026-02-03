@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { BPM_CONFIG, PRELOAD_CONFIG, YOUTUBE_CONFIG } from '@/lib/config';
 
+const ALLOWED_RATES = YOUTUBE_CONFIG.ALLOWED_RATES as readonly number[];
+const DEFAULT_RATE = YOUTUBE_CONFIG.DEFAULT_RATE;
+
+/** Sanitize track rate: must be in YouTube allowed list, else default 1.0. Export for use in page.tsx. */
+export function sanitizeTrackRate(rate: unknown): number {
+  if (typeof rate !== 'number' || !Number.isFinite(rate)) return DEFAULT_RATE;
+  return ALLOWED_RATES.includes(rate) ? rate : DEFAULT_RATE;
+}
+
 export interface Track {
   id: string;
   type: 'youtube';
@@ -121,9 +130,10 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       setTrackRate: (trackId: string, rate: number) => {
+        const safeRate = sanitizeTrackRate(rate);
         set((state) => ({
           tracks: state.tracks.map((track) =>
-            track.id === trackId ? { ...track, rate } : track
+            track.id === trackId ? { ...track, rate: safeRate } : track
           ),
         }));
       },
@@ -192,8 +202,33 @@ export const useProjectStore = create<ProjectState>()(
         lookaheadMs: state.lookaheadMs, // Persist lookahead setting
         preloadPlaylistCandidates: state.preloadPlaylistCandidates, // Persist playlist preload setting
         maxPlaylistPreloads: state.maxPlaylistPreloads, // Persist max playlist preloads
-        tracks: state.tracks.map(({ playerRef, ...track }) => track), // Exclude playerRef from persistence
+        // Persist tracks but only with valid rate (1.0 or allowed list) so we never persist 0.35
+        tracks: state.tracks.map(({ playerRef, ...track }) => ({
+          ...track,
+          rate: ALLOWED_RATES.includes(track.rate) ? track.rate : DEFAULT_RATE,
+        })),
       }),
+      merge: (persisted, current) => {
+        const p = persisted as Partial<ProjectState> | undefined;
+        if (!p?.tracks?.length) return { ...current, ...p };
+        const sanitizedTracks: Track[] = p.tracks.map((t: Partial<Track> & { playerRef?: unknown }) => ({
+          ...t,
+          rate: sanitizeTrackRate(t.rate),
+          volume: typeof t.volume === 'number' && t.volume >= 0 && t.volume <= 1 ? t.volume : 1,
+        })) as Track[];
+        return { ...current, ...p, tracks: sanitizedTracks };
+      },
+      onRehydrateStorage: () => (state) => {
+        if (!state?.tracks?.length) return;
+        const needsFix = state.tracks.some(
+          (t) => typeof t.rate !== 'number' || !ALLOWED_RATES.includes(t.rate)
+        );
+        if (needsFix) {
+          useProjectStore.setState({
+            tracks: state.tracks.map((t) => ({ ...t, rate: sanitizeTrackRate(t.rate) })),
+          });
+        }
+      },
     }
   )
 );

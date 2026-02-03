@@ -4,6 +4,7 @@
  */
 
 import { isPlayerReady, seekSafe, playVideo, pauseVideo, applyPlaybackRate } from '@/lib/youtube/api';
+import { sanitizeTrackRate } from '@/store/project';
 
 /**
  * Transport manager for coordinating playback across multiple tracks
@@ -37,8 +38,8 @@ export class TransportManager {
       if (!isPlayerReady(track.playerRef)) continue;
 
       try {
-        // 1. Apply playback rate first
-        applyPlaybackRate(track.playerRef, track.rate);
+        // 1. Apply playback rate first (sanitize so we never apply invalid e.g. 0.35)
+        applyPlaybackRate(track.playerRef, sanitizeTrackRate(track.rate));
 
         // 2. Seek to lookahead position (start of video minus lookahead)
         const lookaheadSeconds = lookaheadMs / 1000;
