@@ -1267,16 +1267,15 @@ export default function Home() {
           <div className="relative z-10 flex-1 flex flex-col px-4">
             {/* Video 1 Controls */}
             <div className="bg-black/80 backdrop-blur-sm px-8 py-6 border-b border-gray-600 relative z-10">
-              <div className="flex items-center gap-3 min-h-[44px] mb-4">
+              <div className="flex items-center gap-3 min-h-[44px] mb-6">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 1</h2>
                 
                 {/* Playlist Selection */}
-                <div className="flex-1">
+                <div className="flex-1 pb-5">
                   <PlaylistDropdown
                     value={leftVideoId}
                     onChange={handleLeftPlaylistSelection}
                     placeholder="Choose from Playlist..."
-                    className="mb-2"
                   />
                 </div>
               </div>
@@ -1427,16 +1426,15 @@ export default function Home() {
           <div className="relative z-10 flex-1 flex flex-col px-4">
             {/* Video 2 Controls */}
             <div className="bg-black/80 backdrop-blur-sm px-8 py-6 border-b border-gray-600 relative z-10">
-              <div className="flex items-center gap-3 min-h-[44px] mb-4">
+              <div className="flex items-center gap-3 min-h-[44px] mb-6">
                 <h2 className="text-sm font-medium text-white min-w-[60px]">Video 2</h2>
                 
                 {/* Playlist Selection */}
-                <div className="flex-1">
+                <div className="flex-1 pb-5">
                   <PlaylistDropdown
                     value={rightVideoId}
                     onChange={handleRightPlaylistSelection}
                     placeholder="Choose from Playlist..."
-                    className="mb-2"
                   />
                 </div>
               </div>

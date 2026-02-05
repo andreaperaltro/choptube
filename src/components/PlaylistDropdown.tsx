@@ -34,7 +34,7 @@ export default function PlaylistDropdown({
   const isSelectedVideoMissing = value && !selectedVideo;
 
   return (
-    <div className="relative">
+    <div className={`relative ${className}`}>
       <select
         value={value || ''}
         onChange={handleChange}
@@ -42,7 +42,7 @@ export default function PlaylistDropdown({
           isSelectedVideoMissing 
             ? 'border-red-500 bg-red-900/20' 
             : 'border-gray-600'
-        } ${className}`}
+        }`}
         disabled={videos.length === 0}
       >
         <option value="">{placeholder}</option>
@@ -53,16 +53,16 @@ export default function PlaylistDropdown({
         ))}
       </select>
       
-      {/* Warning for missing video */}
-      {isSelectedVideoMissing && (
-        <div className="absolute -bottom-5 left-0 text-xs text-red-400">
+      {/* Warning for missing video - only show if there are videos but selected one is missing */}
+      {isSelectedVideoMissing && videos.length > 0 && (
+        <div className="absolute top-full left-0 mt-1 text-xs text-red-400 whitespace-nowrap">
           ⚠ Video removed from playlist
         </div>
       )}
       
-      {/* Empty state */}
-      {videos.length === 0 && (
-        <div className="absolute -bottom-5 left-0 text-xs text-gray-500">
+      {/* Empty state - only show if no videos AND no value selected (or value is empty) */}
+      {videos.length === 0 && !value && (
+        <div className="absolute top-full left-0 mt-1 text-xs text-gray-500 whitespace-nowrap">
           No videos in playlist
         </div>
       )}
