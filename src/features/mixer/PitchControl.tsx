@@ -11,10 +11,11 @@ const PITCH_STEP = YOUTUBE_CONFIG.PITCH_STEP;
 const PITCH_MIN = YOUTUBE_CONFIG.PITCH_MIN;
 const PITCH_MAX = YOUTUBE_CONFIG.PITCH_MAX;
 
-/** Display/sanitize rate: only show allowed values, default 1.0 */
+/** Display rate: use actual rate value, default 1.0 */
 function displayRateFromTrack(rate: unknown): number {
   const r = typeof rate === 'number' && Number.isFinite(rate) ? rate : 1.0;
-  return (ALLOWED_RATES as readonly number[]).includes(r) ? r : 1.0;
+  // Return the actual rate value (clamped to valid range) - don't restrict to allowed rates
+  return Math.max(PITCH_MIN, Math.min(PITCH_MAX, r));
 }
 
 /**
@@ -74,7 +75,10 @@ export default function PitchControl({ trackId, isDevUI = false }: PitchControlP
     const t = state.tracks.find((x) => x.id === trackId);
     if (!t?.playerRef || !isPlayerReady(t.playerRef)) return;
     const rate = displayRateFromTrack(t.rate);
-    if (t.rate !== rate) setTrackRate(trackId, rate); // fix store if invalid (e.g. persisted 0.35)
+    // Only fix store if rate is out of valid range (not if it's just not in allowed rates)
+    if (t.rate < PITCH_MIN || t.rate > PITCH_MAX) {
+      setTrackRate(trackId, rate);
+    }
     applyRateToPlayer(t.playerRef, quantizeToAllowedRate(rate));
   }, [track?.rate, track?.playerRef, track?.ready, trackId, applyRateToPlayer, setTrackRate]);
 

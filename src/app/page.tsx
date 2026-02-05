@@ -197,7 +197,7 @@ export default function Home() {
   const [buttonText1, setButtonText1] = useState('Paste');
   const [buttonText2, setButtonText2] = useState('Paste');
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
-  const [viewMode, setViewMode] = useState<'split' | 'mono'>('split');
+  const [viewMode, setViewMode] = useState<'split' | 'mono'>('mono');
   const currentlyPlayingRef1 = useRef<number | null>(null);
   const currentlyPlayingRef2 = useRef<number | null>(null);
   const loadingTimeoutRef1 = useRef<NodeJS.Timeout | null>(null);

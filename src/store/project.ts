@@ -130,10 +130,14 @@ export const useProjectStore = create<ProjectState>()(
       },
 
       setTrackRate: (trackId: string, rate: number) => {
-        const safeRate = sanitizeTrackRate(rate);
+        // Store the actual rate value (clamped to valid range) - don't sanitize to allowed rates
+        // Quantization to YouTube allowed rates happens only when applying to the player
+        const clampedRate = typeof rate === 'number' && Number.isFinite(rate) 
+          ? Math.max(0.25, Math.min(2, rate)) 
+          : DEFAULT_RATE;
         set((state) => ({
           tracks: state.tracks.map((track) =>
-            track.id === trackId ? { ...track, rate: safeRate } : track
+            track.id === trackId ? { ...track, rate: clampedRate } : track
           ),
         }));
       },
@@ -202,10 +206,12 @@ export const useProjectStore = create<ProjectState>()(
         lookaheadMs: state.lookaheadMs, // Persist lookahead setting
         preloadPlaylistCandidates: state.preloadPlaylistCandidates, // Persist playlist preload setting
         maxPlaylistPreloads: state.maxPlaylistPreloads, // Persist max playlist preloads
-        // Persist tracks but only with valid rate (1.0 or allowed list) so we never persist 0.35
+        // Persist tracks with actual rate values (clamped to valid range)
         tracks: state.tracks.map(({ playerRef, ...track }) => ({
           ...track,
-          rate: ALLOWED_RATES.includes(track.rate) ? track.rate : DEFAULT_RATE,
+          rate: typeof track.rate === 'number' && Number.isFinite(track.rate)
+            ? Math.max(0.25, Math.min(2, track.rate))
+            : DEFAULT_RATE,
         })),
       }),
       merge: (persisted, current) => {
@@ -213,7 +219,10 @@ export const useProjectStore = create<ProjectState>()(
         if (!p?.tracks?.length) return { ...current, ...p };
         const sanitizedTracks: Track[] = p.tracks.map((t: Partial<Track> & { playerRef?: unknown }) => ({
           ...t,
-          rate: sanitizeTrackRate(t.rate),
+          // Clamp rate to valid range instead of sanitizing to allowed rates
+          rate: typeof t.rate === 'number' && Number.isFinite(t.rate)
+            ? Math.max(0.25, Math.min(2, t.rate))
+            : DEFAULT_RATE,
           volume: typeof t.volume === 'number' && t.volume >= 0 && t.volume <= 1 ? t.volume : 1,
         })) as Track[];
         return { ...current, ...p, tracks: sanitizedTracks };
@@ -221,11 +230,16 @@ export const useProjectStore = create<ProjectState>()(
       onRehydrateStorage: () => (state) => {
         if (!state?.tracks?.length) return;
         const needsFix = state.tracks.some(
-          (t) => typeof t.rate !== 'number' || !ALLOWED_RATES.includes(t.rate)
+          (t) => typeof t.rate !== 'number' || !Number.isFinite(t.rate) || t.rate < 0.25 || t.rate > 2
         );
         if (needsFix) {
           useProjectStore.setState({
-            tracks: state.tracks.map((t) => ({ ...t, rate: sanitizeTrackRate(t.rate) })),
+            tracks: state.tracks.map((t) => ({
+              ...t,
+              rate: typeof t.rate === 'number' && Number.isFinite(t.rate)
+                ? Math.max(0.25, Math.min(2, t.rate))
+                : DEFAULT_RATE,
+            })),
           });
         }
       },
